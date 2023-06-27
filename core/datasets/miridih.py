@@ -65,7 +65,12 @@ class MIRIDIH_Dataset(Dataset):
                 tokenizer=tokenizer,
             )
 
-        results = [self.load_file(file_idx, json_dir, img_dir) for file_idx in tqdm(range(len(os.listdir(json_dir))))]
+        results = []
+        for file_idx in tqdm(range(len(os.listdir(json_dir)))):
+            ret = self.load_file(file_idx, json_dir, img_dir)
+            if ret is not None:
+                results.append(ret)
+        
         for json_file, images in results:
             self.json_file += json_file
             self.images += images
@@ -78,59 +83,51 @@ class MIRIDIH_Dataset(Dataset):
         json_path = os.path.join(json_dir, f"processed_sample_{file_idx}.json")
         image_path = os.path.join(img_dir, f"image_{file_idx}.png")
 
-        json_file.append(json_path)
-        images.append(image_path)
+        if (os.path.isfile(json_path)) and (os.path.isfile(image_path)):
+            json_file.append(json_path)
+            images.append(image_path)
 
-        return json_file, images
+            return json_file, images
     
     def __len__(self):
         return len(self.images)
     
 
     def __getitem__(self, index): #완료
-        # try:
-            print("Dataloader:" + str(index))
-            input_ids, labels, bbox_input, image = self.read_ocr_core_engine(self.json_file[index], self.images[index] , self.tokenizer, self.max_seq_length, self.num_img_embeds, self.image_size)
-            visual_bbox_input = get_visual_bbox(self.image_size) # (x_min, y_min, x_max, y_max) 형태의 좌표로 이루어진 텐서 반환
-            attention_mask = [1] * len(input_ids)
-            decoder_attention_mask = [1] * len(labels)
+        #("Dataloader:" + str(index))
+        input_ids, labels, bbox_input, image = self.read_ocr_core_engine(self.json_file[index], self.images[index] , self.tokenizer, self.max_seq_length, self.num_img_embeds, self.image_size)
+        visual_bbox_input = get_visual_bbox(self.image_size) # (x_min, y_min, x_max, y_max) 형태의 좌표로 이루어진 텐서 반환
+        attention_mask = [1] * len(input_ids)
+        decoder_attention_mask = [1] * len(labels)
 
-            char_list = [0]
-            char_bbox_list = [[0,0,0,0]]
-            char_ids = torch.tensor(char_list, dtype=torch.long)
-            char_bbox_input = torch.tensor(char_bbox_list, dtype=torch.float)
+        char_list = [0]
+        char_bbox_list = [[0,0,0,0]]
+        char_ids = torch.tensor(char_list, dtype=torch.long)
+        char_bbox_input = torch.tensor(char_bbox_list, dtype=torch.float)
 
-            bbox_input = torch.tensor(bbox_input, dtype=torch.float)
-            labels = torch.tensor(labels, dtype=torch.long)
-            input_ids = torch.tensor(input_ids, dtype=torch.long)
-            attention_mask = torch.tensor(attention_mask, dtype=torch.long)
-            decoder_attention_mask = torch.tensor(decoder_attention_mask, dtype=torch.long)
-            assert len(bbox_input) == len(input_ids)
-            assert len(bbox_input.size()) == 2
-            assert len(char_bbox_input.size()) == 2
+        bbox_input = torch.tensor(bbox_input, dtype=torch.float)
+        labels = torch.tensor(labels, dtype=torch.long)
+        input_ids = torch.tensor(input_ids, dtype=torch.long)
+        attention_mask = torch.tensor(attention_mask, dtype=torch.long)
+        decoder_attention_mask = torch.tensor(decoder_attention_mask, dtype=torch.long)
+        assert len(bbox_input) == len(input_ids)
+        assert len(bbox_input.size()) == 2
+        assert len(char_bbox_input.size()) == 2
 
-            return_dict =  {
-                "input_ids": input_ids,
-                "attention_mask": attention_mask,
-                "labels": labels,
-                "seg_data": bbox_input,
-                "visual_seg_data": visual_bbox_input,
-                "decoder_attention_mask": decoder_attention_mask,
-                "image": image,
-                'char_ids': char_ids,
-                'char_seg_data': char_bbox_input
-            }
-            assert input_ids is not None
+        return_dict =  {
+            "input_ids": input_ids,
+            "attention_mask": attention_mask,
+            "labels": labels,
+            "seg_data": bbox_input,
+            "visual_seg_data": visual_bbox_input,
+            "decoder_attention_mask": decoder_attention_mask,
+            "image": image,
+            'char_ids': char_ids,
+            'char_seg_data': char_bbox_input
+        }
+        assert input_ids is not None
 
-            return return_dict
-        # except: #오류가 났다는 거는 파일이 없다는 것. 해당 상황에서는 index+1 파일 불러오는 것으로 대체
-        #     print(f"{index} 파일을 {index+1}로 대체")
-        #     return self.__getitem__(index+1)
-
-            #return self[(index + 1) % len(self)]
-
-    #def get_labels(self): # classification에서 label의 종류 출력하는 함수. 우리는 필요 없을 듯.
-    #    return list(map(str, list(range(self.NUM_LABELS))))
+        return return_dict
 
     def pad_tokens(self, input_ids, bbox): #이건 그냥 길이 max_len에 맞게 맞추는 함수
         # [CLS], sentence, [SEP]

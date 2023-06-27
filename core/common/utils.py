@@ -102,6 +102,10 @@ def img_resize(image, image_size=224):
 
 
 def img_trans_torchvision(image, image_size=224):
+
+    if image.mode == 'RGBA':
+        image = image.convert('RGB')
+
     trans = T.Compose([
             T.Resize([image_size,image_size]),
             T.ToTensor(),
