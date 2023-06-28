@@ -94,7 +94,7 @@ class MIRIDIH_Dataset(Dataset):
     
 
     def __getitem__(self, index): #완료
-        #("Dataloader:" + str(index))
+        # print("Dataloader:" + str(index))
         input_ids, labels, bbox_input, image = self.read_ocr_core_engine(self.json_file[index], self.images[index] , self.tokenizer, self.max_seq_length, self.num_img_embeds, self.image_size)
         visual_bbox_input = get_visual_bbox(self.image_size) # (x_min, y_min, x_max, y_max) 형태의 좌표로 이루어진 텐서 반환
         attention_mask = [1] * len(input_ids)
@@ -157,9 +157,6 @@ class MIRIDIH_Dataset(Dataset):
             except:
                 print(f"wrong in file {file_}")
                 data = {}
-        rets = []
-        n_split = 0
-
 
         image =  Image.open(image_dir)
         width, height = image.size

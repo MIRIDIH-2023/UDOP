@@ -174,7 +174,6 @@ class DataCollatorForT5JointReconstruction:
             mask[:len_keep] = 0
             # Unshuffle to get the binary mask
             mask = torch.gather(mask, dim=0, index=ids_restore)
-            mask[0] = 1
 
             # Convert masked tokens to the '<extra_ids_idx>' format
             is_previous_masked = False

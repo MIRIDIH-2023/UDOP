@@ -5,7 +5,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python: Current File",
+            "name": "Fine-tune UDOP",
             "type": "python",
             "request": "launch",
             "program": "${file}",
@@ -18,11 +18,11 @@
                 "--data_dir",
                 "./data",
                 "--max_seq_length",
-                "1024",
+                "256",
                 "--image_size",
                 "224",
                 "--max_seq_length_decoder",
-                "512",
+                "128",
                 "--max_steps",
                 "700",
                 "--do_train",
@@ -37,7 +37,7 @@
                 "--gradient_accumulation_steps",
                 "8",
                 "--dataloader_num_workers",
-                "8",
+                "4",
                 "--overwrite_output_dir",
                 "true",
                 "--per_device_train_batch_size",
@@ -51,6 +51,19 @@
                 "--weight_decay",
                 "0.001",
             ]
+        },
+        {
+            "name": "Fine-tune UDOP Config",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "cwd": "${fileDirname}",
+            "args": [
+                "config.json"
+            ]
         }
+
     ]
 }

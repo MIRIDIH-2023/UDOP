@@ -1,7 +1,9 @@
 data/
-finetune_midiridh/*
+finetune_miridih/
 udop-unimodel-large-224/
 wandb/
+.DS_Store
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
