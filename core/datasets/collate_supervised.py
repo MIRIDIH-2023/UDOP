@@ -44,16 +44,16 @@ class DataCollatorForSelfSupervisedTasks:
         )
 
 
-    def __call__(self, user_prompt, ori_input_ids, ori_bbox_list):
+    def __call__(self, task, ids_list, sentence_bbox, group_list, group_bbox_list, numbering_list):
 
-        if 'Layout Modeling' in user_prompt:
-            return self.LM(user_prompt, ori_input_ids, ori_bbox_list)
+        if task == 'Layout Modeling':
+            return self.LM(ids_list, sentence_bbox, group_list, group_bbox_list, numbering_list)
         
-        elif 'Visual Text Recognition' in user_prompt:
-            return self.VT(user_prompt, ori_input_ids, ori_bbox_list)
+        elif task == 'Visual Text Recognition':
+            return self.VT(ids_list, sentence_bbox, group_list, group_bbox_list, numbering_list)
         
-        elif 'Joint Text-Layout Reconstruction' in user_prompt:
-            return self.JR(user_prompt, ori_input_ids, ori_bbox_list)
+        elif task == 'Joint Text-Layout Reconstruction':
+            return self.JR(ids_list, sentence_bbox, group_list, group_bbox_list, numbering_list)
         
         else:
             raise ValueError("Invalid user prompt")
@@ -71,7 +71,7 @@ class DataCollatorForT5LayoutModeling:
         self.pad_token_id = pad_token_id
         self.decoder_start_token_id = decoder_start_token_id
 
-    def __call__(self, user_prompt ,ori_input_ids, ori_bbox_list):
+    def __call__(self, input_ids, bbox_list, group_list, group_bbox_list, label_numbering):
 
         # "원래 input text 정보 & bounding box"
         # -->
@@ -79,18 +79,44 @@ class DataCollatorForT5LayoutModeling:
         # +
         # [0,0,0,0]을 promt text token 개수만큼 + 원래 bounding box
         
-        prompt_text = user_prompt
-        prompt_ids =  self.tokenizer.encode(prompt_text, add_special_tokens=False)
-        input_ids = prompt_ids + ori_input_ids
-        bbox_list = [[0,0,0,0]] * len(prompt_ids) + ori_bbox_list
+        res_input_ids = []
+        res_bbox_list = []
 
-        # TODO: 라벨링 하기 (Layout_Modeling_Test.py 참고하면서)
-        if(labels!=None):  #label은 classification에서만 수행
-        #인줄 알았는데 layout modeling 이런것도 다 output이 있으니까 label==output 인건가..???
-          labels = self.tokenizer.encode(labels, add_special_tokens=True)
-
-        return input_ids, labels, bbox_list
-
+        labels = []
+        for i in range(len(label_numbering)):
+            labels += self.tokenizer.encode(f'<extra_l_id_{label_numbering[i]}>', add_special_tokens=True)[:-1]
+            labels += self.tokenizer.encode(f'<loc_{int(500*group_bbox_list[i][0])}>')[:-1]
+            labels += self.tokenizer.encode(f'<loc_{int(500*group_bbox_list[i][1])}>')[:-1]
+            labels += self.tokenizer.encode(f'<loc_{int(500*group_bbox_list[i][2])}>')[:-1]
+            labels += self.tokenizer.encode(f'<loc_{int(500*group_bbox_list[i][3])}>')[:-1]
+            
+        slice_pointer=0
+        L = len(group_list)
+        input_len = len(input_ids)
+        for i in range(input_len):
+            if slice_pointer < L and i == group_list[slice_pointer][0]:
+                temp_ids = self.tokenizer.encode(f'<extra_l_id_{label_numbering[slice_pointer]}>', add_special_tokens=True)[:-1]
+                res_input_ids += temp_ids
+                res_input_ids.append(input_ids[i])
+                res_bbox_list += [[0,0,0,0]] * len(temp_ids)
+                res_bbox_list.append(bbox_list[i])
+            elif slice_pointer < L and i == group_list[slice_pointer][1] :
+                temp_ids = self.tokenizer.encode(f'</extra_l_id{label_numbering[slice_pointer]}>', add_special_tokens=True)[:-1]
+                res_input_ids += temp_ids
+                res_input_ids.append(input_ids[i])
+                res_bbox_list += [[0,0,0,0]] * len(temp_ids)
+                res_bbox_list.append(bbox_list[i])
+                slice_pointer += 1
+            else:
+                res_input_ids.append(input_ids[i])
+                res_bbox_list.append(bbox_list[i])
+                
+        if slice_pointer < L and input_len == group_list[slice_pointer][1] :
+            temp_ids = self.tokenizer.encode(f'</extra_l_id{label_numbering[slice_pointer]}>', add_special_tokens=True)[:-1]
+            res_input_ids += temp_ids
+            res_bbox_list += [[0,0,0,0]] * len(temp_ids)
+        
+        return res_input_ids, labels, res_bbox_list
 
 class DataCollatorForT5VisTextRec:
     """
@@ -104,25 +130,55 @@ class DataCollatorForT5VisTextRec:
         self.pad_token_id = pad_token_id
         self.decoder_start_token_id = decoder_start_token_id
 
-    def __call__(self, user_prompt ,ori_input_ids, ori_bbox_list):
+    # Sub Class에서 해야 할 일
+    # 1. Argument를 user_prompt, ori_input_ids, group_list, ori_bbox_list, label_numbering을 받는다.
+    # 2. label_numbering의 시작이 0이라면, user_prompt를 앞에 id로 변환해서 붙인다. (input_ids에)
+    # 3. label_numbering에 따라서 sentinel token을 ori_bbox_list를 보면서 붙인다. (input_ids에)
+    # 4. labeling은 group_list와 ori_bbox_list를 보면서 붙인다 (labels에)
+    def __call__(self, input_ids, bbox_list, group_list, group_bbox_list, label_numbering):
 
         # "원래 input text 정보 & bounding box"
         # -->
         # "prompt text 정보 + 원래 input text 정보" list
         # +
         # [0,0,0,0]을 promt text token 개수만큼 + 원래 bounding box
-
-        prompt_text = user_prompt
-        prompt_ids =  self.tokenizer.encode(prompt_text, add_special_tokens=False)
-        input_ids = prompt_ids + ori_input_ids
-        bbox_list = [[0,0,0,0]] * len(prompt_ids) + ori_bbox_list
+        tmp_input_ids = []
+        tmp_bbox_list = []
 
         # TODO: 라벨링 하기 (Visual_Text_Recognition_Test.py 참고하면서)
-        if(labels!=None):  #label은 classification에서만 수행
-        #인줄 알았는데 layout modeling 이런것도 다 output이 있으니까 label==output 인건가..???
-          labels = self.tokenizer.encode(labels, add_special_tokens=True)
+        labels = []
+        for i in range(len(label_numbering)):
+            labels += self.tokenizer.encode(f'<extra_t_id_{label_numbering[i]}>', add_special_tokens=True)[:-1]
+            labels += input_ids[group_list[i][0]:group_list[i][1]]
 
-        return input_ids, labels, bbox_list
+
+        slice_pointer=0
+        L = len(group_list)
+        for i in range(len(input_ids)):
+            if slice_pointer < L and i == group_list[slice_pointer][0]:
+                tmp_input_ids += self.tokenizer.encode(f'<extra_t_id_{label_numbering[slice_pointer]}>', add_special_tokens=True)[:-1]
+                #print(f'extra : {len(self.tokenizer.encode(f"<extra_t_id_{label_numbering[slice_pointer]}>", add_special_tokens=True)[:-1])}')
+                tmp_bbox_list.append([0,0,0,0])
+                bbox_ids = []
+                for j in range(4):
+                    if j % 2 == 1:
+                        bbox_ids += self.tokenizer.encode(f'<loc_{int(500*group_bbox_list[slice_pointer][j])}>', add_special_tokens=True)[:-1]
+                        #print(f'loc : {len(self.tokenizer.encode(f"<loc_{int(500*group_bbox_list[slice_pointer][j]/page_size[1])}>", add_special_tokens=True)[:-1])}')
+                    else:
+                        bbox_ids += self.tokenizer.encode(f'<loc_{int(500*group_bbox_list[slice_pointer][j])}>', add_special_tokens=True)[:-1]
+                        #print(f'loc : {len(self.tokenizer.encode(f"<loc_{int(500*group_bbox_list[slice_pointer][j]/page_size[0])}>", add_special_tokens=True)[:-1])}')
+                    tmp_bbox_list.append([0,0,0,0])
+                tmp_input_ids += bbox_ids
+                tmp_input_ids += self.tokenizer.encode(f'</extra_t_id_{label_numbering[slice_pointer]}>', add_special_tokens=True)[:-1]
+                #print(f'extra : {len(self.tokenizer.encode(f"</extra_t_id_{label_numbering[slice_pointer]}>", add_special_tokens=True)[:-1])}')
+                tmp_bbox_list.append([0,0,0,0])
+                i = group_list[slice_pointer][1]-1
+                slice_pointer += 1
+            else:
+                tmp_input_ids.append(input_ids[i])
+                tmp_bbox_list.append(bbox_list[i])
+
+        return tmp_input_ids, labels, tmp_bbox_list
 
 
 class DataCollatorForT5JointReconstruction:
@@ -137,78 +193,43 @@ class DataCollatorForT5JointReconstruction:
         self.pad_token_id = pad_token_id
         self.decoder_start_token_id = decoder_start_token_id
 
-    def __call__(self, user_prompt ,ori_input_text, ori_bbox_list):
-
-        prompt_text = user_prompt
-        prompt_ids =  self.tokenizer.encode(prompt_text, add_special_tokens=False)
+    def __call__(self, input_ids, bbox_list, group_list, group_bbox_list, label_numbering):
         
-        masked_input_text, labels, bbox = self.random_masking(ori_input_text, ori_bbox_list, mask_ratio=0.15)
-        masked_input_ids = self.tokenizer.encode(masked_input_text, add_special_tokens=True)
-        input_ids = prompt_ids + masked_input_ids
-        bbox_list = [[0, 0, 0, 0]] * len(prompt_ids) + bbox + [[0, 0, 0, 0]] # <\s> token
-        label_ids = self.tokenizer.encode(labels, add_special_tokens=True)
+        tmp_input_ids = []
+        tmp_bbox_list = []
 
-        assert len(input_ids) == len(bbox_list)
-        return input_ids, label_ids, bbox_list
-        
-        
-    def random_masking(self, input_text, bbox_list, mask_ratio=0.15):
-        idx = 0
-        
-        total_input_ids, total_targets, total_bbox = [], "", []
+        # TODO: 라벨링 하기 (Visual_Text_Recognition_Test.py 참고하면서)
+        labels = []
+        for idx in range(len(label_numbering)):
+            labels += self.tokenizer.encode(f'<extra_id_{label_numbering[idx]}>', add_special_tokens=False)
+            labels += input_ids[group_list[idx][0]:group_list[idx][1]]
+            labels += self.tokenizer.encode(f'<loc_{int(self.tokenizer._loc_extra_ids * group_bbox_list[idx][0])}>', add_special_tokens=False)
+            labels += self.tokenizer.encode(f'<loc_{int(self.tokenizer._loc_extra_ids * group_bbox_list[idx][1])}>', add_special_tokens=False)
+            labels += self.tokenizer.encode(f'<loc_{int(self.tokenizer._loc_extra_ids * group_bbox_list[idx][2])}>', add_special_tokens=False)
+            labels += self.tokenizer.encode(f'<loc_{int(self.tokenizer._loc_extra_ids * group_bbox_list[idx][3])}>', add_special_tokens=False)
 
-        for text,bbox in zip(input_text, bbox_list):
-            masked_input_ids, targets, part_bbox = [], "", []
+        slice_pointer, idx = 0, 0
+        L = len(group_list)
 
-            L = len(text)
-            len_keep = int(L * (1 - mask_ratio))
+        while idx < len(input_ids):
+            if slice_pointer < L and idx == group_list[slice_pointer][0]:
+                tmp_input_ids += self.tokenizer.encode(f'<extra_id_{label_numbering[slice_pointer]}>', add_special_tokens=False)
+                tmp_bbox_list.append([0,0,0,0])
 
-            noise = torch.rand(L)  # Noise in [0, 1]
-
-            # Sort noise for each sample
-            ids_shuffle = torch.argsort(noise, dim=0)  # Ascend: small is keep, large is remove
-            ids_restore = torch.argsort(ids_shuffle, dim=0)
-
-            # Generate the binary mask: 0 is keep, 1 is remove
-            mask = torch.ones([L])
-            mask[:len_keep] = 0
-            # Unshuffle to get the binary mask
-            mask = torch.gather(mask, dim=0, index=ids_restore)
-
-            # Convert masked tokens to the '<extra_ids_idx>' format
-            is_previous_masked = False
-            previous_bbox = None
-
-            for index, (token, token_bbox, is_masked) in enumerate(zip(text, bbox, mask)):
-                if is_masked:
-                    if not is_previous_masked:
-                        masked_input_ids.append(f"<extra_id_{idx}>")
-                        tokenized_bbox = list(map(int, [i * self.tokenizer._loc_extra_ids for i in token_bbox]))
-                        targets += f" <extra_id_{idx}> {token}" 
-                        part_bbox.append([0, 0, 0, 0])
-                        idx += 1
-
-                    else: # Previous masked
-                        targets += f" {token}"
-                        tokenized_bbox = list(map(int, [i * self.tokenizer._loc_extra_ids for i in token_bbox]))
-                        tokenized_bbox = [min(previous_bbox[0], tokenized_bbox[0]), min(previous_bbox[1], tokenized_bbox[1]), max(previous_bbox[2], tokenized_bbox[2]), max(previous_bbox[3], tokenized_bbox[3])]
-
-                    previous_bbox = tokenized_bbox
-                        
-                else: # not masked
-                    masked_input_ids.append(token)
-                    part_bbox.append(token_bbox)
-                    if previous_bbox is not None:
-                        targets += f" <loc_{previous_bbox[0]}> <loc_{previous_bbox[1]}> <loc_{previous_bbox[2]}> <loc_{previous_bbox[3]}>"
-                        previous_bbox = None
-                is_previous_masked = is_masked
+                idx = group_list[slice_pointer][1]-1
+                slice_pointer += 1
+            else:
+                tmp_input_ids.append(input_ids[idx])
+                tmp_bbox_list.append(bbox_list[idx])
             
-            if previous_bbox is not None:
-                targets += f" <loc_{previous_bbox[0]}> <loc_{previous_bbox[1]}> <loc_{previous_bbox[2]}> <loc_{previous_bbox[3]}>"
+            idx += 1
+        
+        # # TOOD: DEBUG. TO REMOVE
+        # for idx in range(len(input_ids)):
+        #     print(f"Token {idx}: {self.tokenizer.decode([input_ids[idx]])}", end ='\t')
+        # print("\nMask: ", group_list)
+        # print("Masked Text: ", self.tokenizer.decode(tmp_input_ids))
+        # print("Target Text: ", self.tokenizer.decode(labels))
 
-            total_input_ids.extend(masked_input_ids)
-            total_targets += targets
-            total_bbox.extend(part_bbox)
-
-        return total_input_ids, total_targets, total_bbox
+        return tmp_input_ids, labels, tmp_bbox_list
     

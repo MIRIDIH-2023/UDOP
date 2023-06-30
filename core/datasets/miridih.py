@@ -82,8 +82,8 @@ class MIRIDIH_Dataset(Dataset):
         return len(self.images)
     
 
-    def __getitem__(self, index): #완료
-        # print("Dataloader:" + str(index))
+    def __getitem__(self, index):
+        # print("Dataloader on :" + str(self.json_file[index]))
         input_ids, labels, bbox_input, image = self.read_ocr_core_engine(self.json_file[index], self.images[index] , self.tokenizer, self.max_seq_length, self.num_img_embeds, self.image_size)
         visual_bbox_input = get_visual_bbox(self.image_size) # (x_min, y_min, x_max, y_max) 형태의 좌표로 이루어진 텐서 반환
         attention_mask = [1] * len(input_ids)
@@ -136,28 +136,44 @@ class MIRIDIH_Dataset(Dataset):
         assert len(sentence) == len(bbox)
         return (sentence, mask, bbox, start_token, end_token)
 
-    # 해당 부분은 json파일의 문장을 line-by-line으로 읽는 것으로 해당 함수 수정 완료.
+
     def read_ocr_core_engine(self, file_, image_dir, tokenizer, max_seq_length=None, num_img_embeds=None, image_size=224):
-        #max_seq_length와 num_img_embeds 는 원본 코드에서도 안쓰는데 왜있는거지?
 
         with open(file_, 'r', encoding='utf8') as f:
             try:
                 data = json.load(f)
             except:
-                print(f"wrong in file {file_}")
-                data = {}
+                raise AssertionError(f"Wrong file: {file_}")
 
         image =  Image.open(image_dir)
         width, height = image.size
         image = img_trans_torchvision(image, image_size)
 
-        total_text, total_bbox = [], []
-        
-        for text in data['form']: #문장별로 쪼갬
-            sentence_text, sentence_bbox = [], []
-            for word in text['words']: #단어별로 쪼갬
+        if self.task == 'All':
+            r = random.randint(0,2)
+            if r == 0:
+                self.task = 'Layout Modeling'
+            elif r == 1:
+                self.task = 'Visual Text Recognition'
+            else:
+                self.task = 'Joint Text-Layout Reconstruction'
 
-                if word == ' ': #띄어쓰기는 건너뛰기
+        if self.task == 'Layout Modeling':
+            mask_ratio = 0.75
+        elif self.task == 'Visual Text Recognition':
+            mask_ratio = 0.5
+        elif self.task == 'Joint Text-Layout Reconstruction':
+            mask_ratio = 0.15
+
+        
+        total_IDs, total_bbox, total_labels = [], [], []
+        sentinel_idx = 0
+        
+        for text in data['form']: 
+            sentence_text, sentence_bbox = [], []
+            for word in text['words']: 
+
+                if word['text'] == ' ':
                     continue
 
                 bbox = [ 
@@ -167,14 +183,105 @@ class MIRIDIH_Dataset(Dataset):
                     word['box'][3] / height
                 ]
 
-                sub_tokens = tokenizer.tokenize(word['text']) #단어별로 쪼갠걸 다시 토큰화 (하나의 단어도 여러개의 토큰 가능)
+                sub_tokens = tokenizer.tokenize(word['text']) 
                 for sub_token in sub_tokens:
                     sentence_text.append(sub_token)
-                    sentence_bbox.append(bbox) #현재는 단어별 bbox, 추후 문장별 bbox로도 수정 가능
-                    #bbox_list.append(form['box'])
-            total_text.append(sentence_text)
-            total_bbox.append(sentence_bbox)
-        input_ids, labels, bbox_input = self.cls_collator(self.task, total_text, total_bbox) #prompt 붙여서 최종 input,bbox,label을 만듦. ################################
+                    sentence_bbox.append(bbox)
+
+            assert len(sentence_text) == len(sentence_bbox), f"text bbox length mismatch"
+
+            group_list, group_bbox_list = mask_process(sentence_bbox, mask_ratio=mask_ratio)
+
+            numbering_list = [i for i in range(sentinel_idx,sentinel_idx + len(group_list))]
+            sentinel_idx = sentinel_idx + len(group_list)
+
+            ids_list = tokenizer.convert_tokens_to_ids(sentence_text)
+
+            input_ids, labels, bbox_list = self.cls_collator(self.task, ids_list, sentence_bbox, group_list, group_bbox_list, numbering_list)
 
 
-        return input_ids, labels, bbox_input, image
+            total_IDs.extend(input_ids)
+            total_bbox.extend(bbox_list)
+            total_labels.extend(labels)
+
+        return total_IDs, total_labels, total_bbox, image
+
+
+# Argument : ori_bbox_list, mask_ratio
+# Returns : token slices to be masked, grouped bboxes
+def mask_process(bbox_list, mask_ratio=0.75):
+    l = len(bbox_list)
+    mask = random_masking(L=l, mask_ratio=mask_ratio)
+    grouped_tokens = group_tokens(mask)
+    return grouped_tokens, group_bbox(bbox_list, grouped_tokens)
+
+def random_masking(L=4096, mask_ratio=0.75):
+    """
+    Perform per-sample random masking by per-sample shuffling.
+    Per-sample shuffling is done by argsort random noise.
+    x: [N, L, D], sequence
+    """
+    len_keep = int(L * (1 - mask_ratio))
+
+    noise = torch.rand(L)  # noise in [0, 1]
+
+    # sort noise for each sample
+    ids_shuffle = torch.argsort(noise, dim=0)  # ascend: small is keep, large is remove
+    ids_restore = torch.argsort(ids_shuffle, dim=0)
+
+    # generate the binary mask: 0 is keep, 1 is remove
+    mask = torch.ones([L])
+    mask[:len_keep] = 0
+    # unshuffle to get the binary mask
+    mask = torch.gather(mask, dim=0, index=ids_restore)
+    return mask
+
+# Argument : random_masking의 mask
+# Returns : masking할 곳의 slice들
+def group_tokens(mask):
+
+    group_lst = []
+    i=0
+    prev=0
+
+    for m in mask:
+        if m == 0:
+            if i == prev:
+                pass
+            else:
+                group_lst.append([prev, i])
+            prev = i+1
+        i += 1
+
+    if prev != i:
+        group_lst.append([prev, i])
+
+    return group_lst
+
+# Argument : ori_bbox_lst, group_tokens의 리턴 list (slices)
+# Returns : masking된 부분의 그룹화된 bbox
+def group_bbox(bbox_lst, group_lst):
+
+    bbox_group_lst = []
+
+    for s in group_lst:
+        target = bbox_lst[s[0]:s[1]]
+        if len(target) == 1:
+            bbox_group_lst.append(*target)
+        else:
+            t = target[0][0]
+            l = target[0][1]
+            b = target[0][2]
+            r = target[0][3]
+            for i in target[1:]:
+                if i[0] < t:
+                    t = i[0]
+                if i[1] < l:
+                    l = i[1]
+                if i[2] > b:
+                    b = i[2]
+                if i[3] > r:
+                    b = i[3]
+            bbox_group_lst.append([t,l,b,r])
+    
+    return bbox_group_lst
