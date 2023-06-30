@@ -2,19 +2,18 @@ import json
 import logging
 import os
 import random
-import pandas as pd
-
-
-from tqdm import tqdm
-from PIL import Image
-
-import torch
-from torch.utils.data import Dataset
-
-from core.common.utils import img_trans_torchvision, get_visual_bbox
-from core.datasets.collate_supervised import DataCollatorForSelfSupervisedTasks
+import re
 from io import BytesIO
+
+import pandas as pd
 import requests
+import torch
+from PIL import Image
+from torch.utils.data import Dataset
+from tqdm import tqdm
+
+from core.common.utils import get_visual_bbox, img_trans_torchvision
+from core.datasets.collate_supervised import DataCollatorForSelfSupervisedTasks
 
 EMPTY_BOX = [0, 0, 0, 0]
 SEP_BOX = [1000, 1000, 1000, 1000]
@@ -65,29 +64,19 @@ class MIRIDIH_Dataset(Dataset):
                 tokenizer=tokenizer,
             )
 
-        results = []
-        for file_idx in tqdm(range(len(os.listdir(json_dir)))):
-            ret = self.load_file(file_idx, json_dir, img_dir)
-            if ret is not None:
-                results.append(ret)
+        for json_file in tqdm(os.listdir(json_dir)):
+            idx = int(re.findall(r'\d+', json_file)[0])
+            json_path = os.path.join(json_dir, json_file)
+            image_path = os.path.join(img_dir, f"image_{idx}.png")
+
+            if (os.path.isfile(json_path)) and (os.path.isfile(image_path)):
+                self.json_file.append(json_path)
+                self.images.append(image_path)
         
-        for json_file, images in results:
-            self.json_file += json_file
-            self.images += images
-        # assert len(self.labels) == len(self.json_file)
-        # logger.info(f'There are {len(self.labels)} images with annotations')
 
-    def load_file(self, file_idx, json_dir, img_dir):
-        json_file, images = [], []
+        assert len(self.json_file) == len(self.images)
+        logger.info(f'There are {self.images} images with annotations')
 
-        json_path = os.path.join(json_dir, f"processed_sample_{file_idx}.json")
-        image_path = os.path.join(img_dir, f"image_{file_idx}.png")
-
-        if (os.path.isfile(json_path)) and (os.path.isfile(image_path)):
-            json_file.append(json_path)
-            images.append(image_path)
-
-            return json_file, images
     
     def __len__(self):
         return len(self.images)

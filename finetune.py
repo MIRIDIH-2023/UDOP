@@ -6,29 +6,23 @@ import os
 import sys
 from dataclasses import dataclass, field
 from typing import Optional
-import torch
 
+import evaluate
 import numpy as np
-from datasets import ClassLabel, load_dataset, load_metric
-
 import transformers
-from transformers import (
-    AutoConfig,
-    AutoModelForTokenClassification,
-    AutoTokenizer,
-    HfArgumentParser,
-    PreTrainedTokenizerFast,
-    TrainingArguments,
-    Trainer, 
-    set_seed,
-)
+from datasets import ClassLabel, load_dataset, load_metric
+from transformers import (AutoConfig, AutoModelForTokenClassification,
+                          AutoTokenizer, HfArgumentParser,
+                          PreTrainedTokenizerFast, Trainer, TrainingArguments,
+                          set_seed)
 from transformers.trainer_utils import get_last_checkpoint, is_main_process
 from transformers.utils import check_min_version
 
+from core.common.utils import random_split
 from core.datasets import MIRIDIH_Dataset
+from core.models import (UdopConfig, UdopTokenizer,
+                         UdopUnimodelForConditionalGeneration)
 from core.trainers import DataCollator
-from core.models import UdopUnimodelForConditionalGeneration, UdopConfig, UdopTokenizer
-
 
 MODEL_CLASSES = {
     'UdopUnimodel': (UdopConfig, UdopUnimodelForConditionalGeneration, UdopTokenizer),
@@ -266,7 +260,7 @@ def main():
     total_dataset = (MIRIDIH_Dataset(data_args=data_args, tokenizer=tokenizer)
                      if training_args.do_train else None)
 
-    train_dataset, eval_dataset, test_dataset = torch.utils.data.random_split(total_dataset, [0.8, 0.1, 0.1])
+    train_dataset, eval_dataset, test_dataset = random_split(total_dataset, [0.8, 0.1, 0.1])
 
     # Data collator
     padding = "max_length" if data_args.pad_to_max_length else False
@@ -276,7 +270,7 @@ def main():
         max_length=data_args.max_seq_length,
         max_length_decoder=data_args.max_seq_length_decoder,
     )
-    metric = load_metric("accuracy")
+    metric = evaluate.load("accuracy")
 
     def compute_metrics(eval_pred):
         logits, labels = eval_pred
