@@ -236,10 +236,31 @@ def main():
     # The .from_pretrained methods guarantee that only one local process can concurrently
     # download model & vocab.
 
-    config = UdopConfig.from_pretrained("udop-unimodel-large-224")
-    tokenizer = UdopTokenizer.from_pretrained("udop-unimodel-large-224")
-    model = UdopUnimodelForConditionalGeneration.from_pretrained("udop-unimodel-large-224", ignore_mismatched_sizes=True)
+    config = config_type.from_pretrained(
+        model_args.config_name if model_args.config_name else model_args.model_name_or_path,
+        finetuning_task=data_args.task_name,
+        cache_dir=model_args.cache_dir,
+        revision=model_args.model_revision,
+        use_auth_token=True if model_args.use_auth_token else None,
+        attention_type=model_args.attention_type if model_args.attention_type else None,
+    )
 
+    tokenizer = tokenizer_type.from_pretrained(
+        model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
+        cache_dir=model_args.cache_dir,
+        use_fast=True,
+        revision=model_args.model_revision,
+        use_auth_token=True if model_args.use_auth_token else None,
+    )
+
+    model = model_type.from_pretrained(
+        model_args.model_name_or_path,
+        from_tf=bool(".ckpt" in model_args.model_name_or_path),
+        config=config,
+        cache_dir=model_args.cache_dir,
+        revision=model_args.model_revision,
+        use_auth_token=True if model_args.use_auth_token else None,
+    )
 
    # Get datasets
     total_dataset = (MIRIDIH_Dataset(data_args=data_args, tokenizer=tokenizer)
@@ -319,12 +340,6 @@ def main():
     #         with open(output_test_predictions_file, "w") as writer:
     #             for prediction in true_predictions:
     #                 writer.write(prediction + "\n")
-        
-
-def _mp_fn(index):
-    # For xla_spawn (TPUs)
-    main()
-
 
 if __name__ == "__main__":
     main()

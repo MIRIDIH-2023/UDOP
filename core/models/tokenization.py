@@ -1,4 +1,4 @@
-from transformers import T5Tokenizer, PreTrainedTokenizer
+from transformers import T5Tokenizer, T5TokenizerFast, PreTrainedTokenizer, PreTrainedTokenizerBase
 import re
 import sentencepiece as spm
 
@@ -123,3 +123,111 @@ class UdopTokenizer(T5Tokenizer):
                 raise
         return token
 
+
+# Below are for Rust-based Fast Tokenizer
+
+from transformers.convert_slow_tokenizer import SpmConverter
+from tokenizers import processors
+from typing import List
+
+
+class UdopConverter(SpmConverter):
+    def vocab(self, proto):
+        vocab = [(piece.piece, piece.score) for piece in proto.pieces]
+        num_extra_ids = self.original_tokenizer._extra_ids
+        vocab += [("<extra_id_{}>".format(i), 0.0)
+                  for i in range(num_extra_ids - 1, -1, -1)]
+        vocab += [("<extra_l_id_{}>".format(i), 0.0)
+                  for i in range(num_extra_ids - 1, -1, -1)]
+        vocab += [("</extra_l_id_{}>".format(i), 0.0)
+                  for i in range(num_extra_ids - 1, -1, -1)]
+        vocab += [("<extra_t_id_{}>".format(i), 0.0)
+                  for i in range(num_extra_ids - 1, -1, -1)]
+        vocab += [("</extra_t_id_{}>".format(i), 0.0)
+                  for i in range(num_extra_ids - 1, -1, -1)]
+        
+        num_loc_extra_ids = self.original_tokenizer._loc_extra_ids
+        vocab += [("<loc_{}>".format(i), 0.0)
+                  for i in range(num_loc_extra_ids - 1, -1, -1)]
+
+        num_other_extra_ids = self.original_tokenizer._other_extra_ids
+        vocab += [("<other_0{}>".format(i), 0.0)
+                  for i in range(num_other_extra_ids - 1, -1, -1)]
+        
+        return vocab
+
+    def post_processor(self):
+        return processors.TemplateProcessing(
+            single=["$A", "</s>"],
+            pair=["$A", "</s>", "$B", "</s>"],
+            special_tokens=[
+                ("</s>", self.original_tokenizer.convert_tokens_to_ids("</s>")),
+            ],
+        )
+
+
+def convert_slow_udoptokenizer(UdopTokenizer):
+    return UdopConverter(UdopTokenizer).converted()
+
+
+class UdopTokenizerFast(T5TokenizerFast):
+
+    slow_tokenizer_class = UdopTokenizer
+    prefix_tokens: List[int] = []
+
+    def __init__(
+        self,
+        vocab_file,
+        tokenizer_file=None,
+        eos_token="</s>",
+        unk_token="<unk>",
+        pad_token="<pad>",
+        extra_ids=100,
+        loc_extra_ids=201,
+        other_extra_ids=200,
+        additional_special_tokens=None,
+        **kwargs
+    ):
+        # Add extra_ids to the special token list
+        if extra_ids > 0 and additional_special_tokens is None:
+            additional_special_tokens = ["<extra_id_{}>".format(i) for i in range(extra_ids)]
+            additional_special_tokens.extend(["<extra_l_id_{}>".format(i) for i in range(extra_ids)])
+            additional_special_tokens.extend(["</extra_l_id_{}>".format(i) for i in range(extra_ids)])
+            additional_special_tokens.extend(["<extra_t_id_{}>".format(i) for i in range(extra_ids)])
+            additional_special_tokens.extend(["</extra_t_id_{}>".format(i) for i in range(extra_ids)])
+
+        if loc_extra_ids > 0 and not "<loc_0>" in additional_special_tokens:
+            additional_special_tokens.extend(["<loc_{}>".format(i) for i in range(loc_extra_ids)])
+            
+        if other_extra_ids > 0 and not "<other_0>" in additional_special_tokens:
+            additional_special_tokens.extend(["<other_{}>".format(i) for i in range(other_extra_ids)])
+        
+        slow_tokenizer = self.slow_tokenizer_class(
+            vocab_file,
+            tokenizer_file=tokenizer_file,
+            eos_token=eos_token,
+            unk_token=unk_token,
+            pad_token=pad_token,
+            extra_ids=extra_ids,
+            loc_extra_ids=loc_extra_ids,
+            other_extra_ids=other_extra_ids,
+            **kwargs
+        )
+        fast_tokenizer = convert_slow_udoptokenizer(slow_tokenizer)
+        self._tokenizer = fast_tokenizer
+
+        PreTrainedTokenizerBase.__init__(
+            self,
+            tokenizer_file=tokenizer_file,
+            eos_token=eos_token,
+            unk_token=unk_token,
+            pad_token=pad_token,
+            extra_ids=extra_ids,
+            additional_special_tokens=additional_special_tokens,
+            **kwargs,
+        )
+
+        self.vocab_file = vocab_file
+        self._extra_ids = extra_ids
+        self._loc_extra_ids = loc_extra_ids
+        self._other_extra_ids = other_extra_ids
