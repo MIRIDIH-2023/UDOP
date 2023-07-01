@@ -167,6 +167,10 @@ class MIRIDIH_Dataset(Dataset):
 
         
         total_IDs, total_bbox, total_labels = [], [], []
+
+        total_IDs.extend(tokenizer.encode(self.task, add_special_tokens=False))
+        total_bbox += [[0,0,0,0]] * len(total_IDs)
+
         sentinel_idx = 0
         
         for text in data['form']: 
@@ -196,13 +200,16 @@ class MIRIDIH_Dataset(Dataset):
             sentinel_idx = sentinel_idx + len(group_list)
 
             ids_list = tokenizer.convert_tokens_to_ids(sentence_text)
-
+ 
             input_ids, labels, bbox_list = self.cls_collator(self.task, ids_list, sentence_bbox, group_list, group_bbox_list, numbering_list)
-
 
             total_IDs.extend(input_ids)
             total_bbox.extend(bbox_list)
             total_labels.extend(labels)
+        
+        total_IDs.append(tokenizer.eos_token_id)
+        total_bbox += [[0,0,0,0]]
+        total_labels.append(tokenizer.eos_token_id)
 
         return total_IDs, total_labels, total_bbox, image
 

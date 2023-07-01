@@ -210,8 +210,9 @@ class DataCollatorForT5JointReconstruction:
 
         slice_pointer, idx = 0, 0
         L = len(group_list)
-
-        while idx < len(input_ids):
+        len_ID = len(input_ids)
+        
+        while idx < len_ID:
             if slice_pointer < L and idx == group_list[slice_pointer][0]:
                 tmp_input_ids += self.tokenizer.encode(f'<extra_id_{label_numbering[slice_pointer]}>', add_special_tokens=False)
                 tmp_bbox_list.append([0,0,0,0])
@@ -230,6 +231,7 @@ class DataCollatorForT5JointReconstruction:
         # print("\nMask: ", group_list)
         # print("Masked Text: ", self.tokenizer.decode(tmp_input_ids))
         # print("Target Text: ", self.tokenizer.decode(labels))
+        # print()
 
         return tmp_input_ids, labels, tmp_bbox_list
     
