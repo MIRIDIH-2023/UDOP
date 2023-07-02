@@ -257,8 +257,7 @@ def main():
     )
 
    # Get datasets
-    total_dataset = (MIRIDIH_Dataset(data_args=data_args, tokenizer=tokenizer)
-                     if training_args.do_train else None)
+    total_dataset = MIRIDIH_Dataset(data_args=data_args, tokenizer=tokenizer)
 
     train_dataset, eval_dataset, test_dataset = random_split(total_dataset, [0.8, 0.1, 0.1])
 

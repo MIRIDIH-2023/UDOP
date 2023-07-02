@@ -57,6 +57,7 @@ class DataCollator:
     pad_to_multiple_of: Optional[int] = None
 
     def __call__(self, features: List[Dict[str, Union[List[int], torch.Tensor]]]):# -> Dict[str, torch.Tensor]:
+        # features: dict_keys(['input_ids', 'attention_mask', 'labels', 'seg_data', 'visual_seg_data', 'decoder_attention_mask', 'image', 'char_ids', 'char_seg_data'])
         if features[0] is None:
             return {'placeholder': torch.zeros(size=(2, 2), dtype=torch.long)}
         batch_size = len(features)
@@ -64,11 +65,10 @@ class DataCollator:
         max_len = self.max_length
         max_len_decoder = self.max_length_decoder
         max_len_char = self.max_length_char
-        max_feature_len = max([f["input_ids"].shape[0] for f in features])
-        max_feature_len_decoder = max([f["labels"].shape[0] for f in features])
+
+        target_len = max_len
+        target_len_decoder = max_len_decoder
         
-        target_len = min(max_feature_len, max_len)
-        target_len_decoder = min(max_feature_len_decoder, max_len_decoder)
         # if features[0]["char_ids"] is not None:
         if "char_ids" in features[0]:
             max_feature_len_char = max([f["char_ids"].shape[0] for f in features])
