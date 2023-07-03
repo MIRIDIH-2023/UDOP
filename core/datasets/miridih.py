@@ -4,6 +4,7 @@ import os
 import random
 import re
 from io import BytesIO
+import pickle
 
 import pandas as pd
 import requests
@@ -35,12 +36,12 @@ class MIRIDIH_Dataset(Dataset):
         assert os.path.isdir(data_args.data_dir), f"Data dir {data_args.data_dir} does not exist!"
         logger.info('Loading Dataset')
 
-        json_dir = os.path.join(data_args.data_dir, 'json')
+        json_dir = os.path.join(data_args.data_dir, 'json_data')
         img_dir = os.path.join(data_args.data_dir, 'images')
 
-        csv_path = os.path.join(data_args.data_dir, 'sample.csv')
+        # csv_path = os.path.join(data_args.data_dir, 'sample.csv')
 
-        self.main_df = pd.read_csv(csv_path) # xml_sample.csv 파일 저장
+        # self.main_df = pd.read_csv(csv_path) # xml_sample.csv 파일 저장
 
         self.sheet_url = 'sheet_url'
         self.image_url = 'thumbnail_url'
@@ -83,7 +84,7 @@ class MIRIDIH_Dataset(Dataset):
     
 
     def __getitem__(self, index):
-        # print("Dataloader on :" + str(self.json_file[index]))
+        # print(f"Dataloader on: {self.json_file[index]}, index: {index}")
         input_ids, labels, bbox_input, image = self.read_ocr_core_engine(self.json_file[index], self.images[index] , self.tokenizer, self.max_seq_length, self.num_img_embeds, self.image_size)
         visual_bbox_input = get_visual_bbox(self.image_size) # (x_min, y_min, x_max, y_max) 형태의 좌표로 이루어진 텐서 반환
         attention_mask = [1] * len(input_ids)
@@ -99,9 +100,9 @@ class MIRIDIH_Dataset(Dataset):
         input_ids = torch.tensor(input_ids, dtype=torch.long)
         attention_mask = torch.tensor(attention_mask, dtype=torch.long)
         decoder_attention_mask = torch.tensor(decoder_attention_mask, dtype=torch.long)
-        assert len(bbox_input) == len(input_ids)
-        assert len(bbox_input.size()) == 2
-        assert len(char_bbox_input.size()) == 2
+        assert len(bbox_input) == len(input_ids), f"BBOX_INPUT != INPUT_IDS on file {self.json_file[index]}, index: {index}"
+        assert len(bbox_input.size()) == 2, f"BBOX_INPUT SIZE error on file {self.json_file[index]}, index: {index}"
+        assert len(char_bbox_input.size()) == 2, f"char_bbox_input size error on file {self.json_file[index]}, index: {index}"
 
         return_dict =  {
             "input_ids": input_ids,
@@ -139,9 +140,10 @@ class MIRIDIH_Dataset(Dataset):
 
     def read_ocr_core_engine(self, file_, image_dir, tokenizer, max_seq_length=None, num_img_embeds=None, image_size=224):
 
-        with open(file_, 'r', encoding='utf8') as f:
+        with open(file_, 'rb') as f:
             try:
-                data = json.load(f)
+                obj = pickle.load(f)
+                data = json.loads(json.dumps(obj, default=str))
             except:
                 raise AssertionError(f"Wrong file: {file_}")
 

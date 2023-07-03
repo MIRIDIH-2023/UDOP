@@ -67,7 +67,7 @@ class DataCollator:
         max_len_char = self.max_length_char
 
         target_len = max_len
-        target_len_decoder = max_len_decoder
+        target_len_decoder = max_len_decoder        
         
         # if features[0]["char_ids"] is not None:
         if "char_ids" in features[0]:
@@ -85,12 +85,16 @@ class DataCollator:
                 continue
 
             if key in ['decoder_input_ids', 'labels', 'decoder_attention_mask', 'decoder_seg_data']:
+                for f in features:
+                    f[key] = f[key][:target_len_decoder]
                 batched_feature = torch.stack([pad_sequence_native(f[key], target_len_decoder, pad_value) for f in features], dim=0)
             elif key == "visual_seg_data":
                 batched_feature = torch.stack([f[key] for f in features], dim=0)    
             elif key in ['char_ids', 'char_seg_data']:
                 batched_feature = torch.stack([pad_sequence_native(f[key], target_len_char, pad_value) for f in features], dim=0)
             else:
+                for f in features:
+                    f[key] = f[key][:target_len]
                 batched_feature = torch.stack([pad_sequence_native(f[key], target_len, pad_value) for f in features], dim=0)
             batch[key] = batched_feature
 

@@ -316,7 +316,6 @@ def main():
         trainer.save_metrics("eval", metrics)
 
     # # Predict
-    # label_list = get_rvlcdip_labels()
     # if training_args.do_predict:
     #     logger.info("*** Predict ***")
 
