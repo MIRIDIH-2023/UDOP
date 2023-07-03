@@ -4,6 +4,7 @@
 import json
 import os
 import re
+import pickle 
 
 # Specify the image folder and the JSON folder
 json_folder_path = "../data/json"
@@ -17,9 +18,9 @@ def process_json(json_folder_path):
     json_files = os.listdir(json_folder_path)
     for json_file in json_files:
         path = os.path.join(json_folder_path, json_file)
-        with open(path, 'r', encoding='utf8') as f:
-
-            data = json.load(f)
+        with open(path, 'rb') as f:
+            obj = pickle.load(f)
+            data = json.loads(json.dumps(obj, default=str))
             text = data['form']
             if not text:
                 print(json_file)
