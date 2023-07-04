@@ -36,10 +36,16 @@ def pad_sequence(seq, target_len, pad_value=0):
 
 
 def collate_vlembed(inputs_patches, inputs_embeds, seg_data, visual_segdata, vis_special_token=None, attention_mask=None, num_patches=14, max_len=0):
-    
+    # input_patches: [batch, num_patches, emb_dim] -> [B, 196, 1024]
+    # input_embeds: [batch, seq_len, emb_dim] -> [B, 256, 1024]
+    # seg_data: [batch, seq_len, 4] -> [B, 256, 4]
+    # visual_segdata: [batch, num_patches, 4] -> [B, 196, 4]
+    # vis_special_token: [1, 1, 1024]
+    # attention_mask: [batch, seq_len] -> [B, 256]
+
     L = num_patches
-    ocr_points_x = torch.clip(torch.floor((seg_data[:, :, 0]+seg_data[:, :, 2])/2.0 * L).long(), 0, L-1)
-    ocr_points_y = torch.clip(torch.floor((seg_data[:, :, 1]+seg_data[:, :, 3])/2.0 * L).long(), 0, L-1) * L
+    ocr_points_x = torch.clip(torch.floor((seg_data[:, :, 0]+seg_data[:, :, 2])/2.0 * L).long(), 0, L-1) # Index of patch across x-axis
+    ocr_points_y = torch.clip(torch.floor((seg_data[:, :, 1]+seg_data[:, :, 3])/2.0 * L).long(), 0, L-1) * L #Index of patch across y-axis but flattened
     ocr_points = ocr_points_x + ocr_points_y
     target_seg = (seg_data.mean(-1) == 0.0) | (seg_data.mean(-1) == 1.0)
     repeated_vision_embeds = torch.gather(inputs_patches, 1, ocr_points.unsqueeze(-1).repeat(1, 1, inputs_patches.size(-1)))
@@ -298,7 +304,7 @@ class T52dStack(T5PreTrainedModel):
 
         if inputs_embeds is None:
             assert self.embed_tokens is not None, "You have to intialize the model with valid token embeddings"
-            inputs_embeds = self.embed_tokens(input_ids)
+            inputs_embeds = self.embed_tokens(input_ids) # Embedding input ids. (B, seq_len) -> (B, seq_len, num_dim)
                 
         if inputs_patches is not None:
             #===========================    
@@ -536,9 +542,9 @@ class UdopUnimodelForConditionalGeneration(T5ForConditionalGeneration):
             inputs_patches=None
             if image is not None:
                 assert visual_seg_data is not None
-                x = self.patch_embed(image)
+                x = self.patch_embed(image) # (B, N, embed_dim) -> (B, 196, 1024)
                 num_patches = image.size(2) // 16
-                if ids_keep is not None:
+                if ids_keep is not None: # if we are masking images
                     x = torch.gather(x, dim=1, index=ids_keep.unsqueeze(-1).repeat(1, 1, x.size(-1)))
                     pad_tokens = self.pad_token.repeat(x.shape[0], ids_restore.shape[1] - x.shape[1], 1)
                     x_padded = torch.cat([x, pad_tokens], dim=1)  # no cls token
