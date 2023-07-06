@@ -154,17 +154,17 @@ class MIRIDIH_Dataset(Dataset):
         if self.task == 'All':
             r = random.randint(0,2)
             if r == 0:
-                self.task = 'Layout Modeling'
+                self.task = 'Layout Modeling.'
             elif r == 1:
-                self.task = 'Visual Text Recognition'
+                self.task = 'Visual Text Recognition.'
             else:
-                self.task = 'Joint Text-Layout Reconstruction'
+                self.task = 'Joint Text-Layout Reconstruction.'
 
-        if self.task == 'Layout Modeling':
+        if self.task == 'Layout Modeling.':
             mask_ratio = 0.75
-        elif self.task == 'Visual Text Recognition':
+        elif self.task == 'Visual Text Recognition.':
             mask_ratio = 0.5
-        elif self.task == 'Joint Text-Layout Reconstruction':
+        elif self.task == 'Joint Text-Layout Reconstruction.':
             mask_ratio = 0.15
 
         
@@ -175,7 +175,7 @@ class MIRIDIH_Dataset(Dataset):
 
         sentinel_idx = 0
         
-        for text in data['form']: 
+        for idx, text in enumerate(data['form']): 
             sentence_text, sentence_bbox = [], []
             for word in text['words']: 
 
@@ -208,10 +208,10 @@ class MIRIDIH_Dataset(Dataset):
             total_IDs.extend(input_ids)
             total_bbox.extend(bbox_list)
             total_labels.extend(labels)
-        
-        total_IDs.append(tokenizer.eos_token_id)
-        total_bbox += [[0,0,0,0]]
-        total_labels.append(tokenizer.eos_token_id)
+                
+            total_IDs.append(tokenizer.eos_token_id)
+            total_bbox += [[0,0,0,0]]
+            total_labels.append(tokenizer.eos_token_id)
 
         return total_IDs, total_labels, total_bbox, image
 
