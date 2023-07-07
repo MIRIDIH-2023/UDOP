@@ -46,13 +46,13 @@ class DataCollatorForSelfSupervisedTasks:
 
     def __call__(self, task, ids_list, sentence_bbox, group_list, group_bbox_list, numbering_list):
 
-        if task == 'Layout Modeling.':
+        if 'Layout Modeling' in task:
             return self.LM(ids_list, sentence_bbox, group_list, group_bbox_list, numbering_list)
         
-        elif task == 'Visual Text Recognition.':
+        elif 'Visual Text Recognition' in task:
             return self.VT(ids_list, sentence_bbox, group_list, group_bbox_list, numbering_list)
         
-        elif task == 'Joint Text-Layout Reconstruction.':
+        elif 'Joint Text-Layout Reconstruction' in task:
             return self.JR(ids_list, sentence_bbox, group_list, group_bbox_list, numbering_list)
         
         else:
@@ -73,10 +73,10 @@ class DataCollatorForT5LayoutModeling:
 
     def __call__(self, input_ids, bbox_list, group_list, group_bbox_list, label_numbering):
         
-        input_ids = []
-        bbox_list = []
-
+        res_input_ids = []
+        res_bbox_list = []
         labels = []
+        
         for idx in range(len(label_numbering)):
             labels += self.tokenizer.encode(f'<extra_l_id_{label_numbering[idx]}>', add_special_tokens=False)
             labels += self.tokenizer.encode(f'<loc_{int(self.tokenizer._loc_extra_ids*group_bbox_list[idx][0])}>', add_special_tokens=False)
@@ -89,25 +89,25 @@ class DataCollatorForT5LayoutModeling:
         input_len = len(input_ids)
         for i in range(input_len):
             if slice_pointer < L and i == group_list[slice_pointer][0]:
-                input_ids += self.tokenizer.encode(f'<extra_l_id_{label_numbering[slice_pointer]}>', add_special_tokens=False)
-                input_ids.append(input_ids[i])
-                bbox_list.append([0,0,0,0])
-                bbox_list.append(bbox_list[i])
+                res_input_ids += self.tokenizer.encode(f'<extra_l_id_{label_numbering[slice_pointer]}>', add_special_tokens=False)
+                res_input_ids.append(input_ids[i])
+                res_bbox_list.append([0,0,0,0])
+                res_bbox_list.append(bbox_list[i])
             elif slice_pointer < L and i == group_list[slice_pointer][1] :
-                input_ids += self.tokenizer.encode(f'</extra_l_id_{label_numbering[slice_pointer]}>', add_special_tokens=False)
-                input_ids.append(input_ids[i])
-                bbox_list.append([0,0,0,0])
-                bbox_list.append(bbox_list[i])
+                res_input_ids += self.tokenizer.encode(f'</extra_l_id_{label_numbering[slice_pointer]}>', add_special_tokens=False)
+                res_input_ids.append(input_ids[i])
+                res_bbox_list.append([0,0,0,0])
+                res_bbox_list.append(bbox_list[i])
                 slice_pointer += 1
             else:
-                input_ids.append(input_ids[i])
-                bbox_list.append(bbox_list[i])
+                res_input_ids.append(input_ids[i])
+                res_bbox_list.append(bbox_list[i])
                 
         if slice_pointer < L and input_len == group_list[slice_pointer][1] :
-            input_ids += self.tokenizer.encode(f'</extra_l_id_{label_numbering[slice_pointer]}>', add_special_tokens=False)
-            bbox_list.append([0,0,0,0])
+            res_input_ids += self.tokenizer.encode(f'</extra_l_id_{label_numbering[slice_pointer]}>', add_special_tokens=False)
+            res_bbox_list.append([0,0,0,0])
         
-        return input_ids, labels, bbox_list
+        return res_input_ids, labels, res_bbox_list
 
 class DataCollatorForT5VisTextRec:
     """
@@ -123,10 +123,10 @@ class DataCollatorForT5VisTextRec:
 
     def __call__(self, input_ids, bbox_list, group_list, group_bbox_list, label_numbering):
 
-        input_ids = []
-        bbox_list = []
-
+        res_input_ids = []
+        res_bbox_list = []
         labels = []
+
         for idx in range(len(label_numbering)):
             labels += self.tokenizer.encode(f'<extra_t_id_{label_numbering[idx]}>', add_special_tokens=False)
             labels += input_ids[group_list[idx][0]:group_list[idx][1]]
@@ -138,26 +138,26 @@ class DataCollatorForT5VisTextRec:
 
         while idx < len_ID:
             if slice_pointer < L and idx == group_list[slice_pointer][0]:
-                input_ids += self.tokenizer.encode(f'<extra_t_id_{label_numbering[slice_pointer]}>', add_special_tokens=False)
-                bbox_list.append([0,0,0,0])
+                res_input_ids += self.tokenizer.encode(f'<extra_t_id_{label_numbering[slice_pointer]}>', add_special_tokens=False)
+                res_bbox_list.append([0,0,0,0])
 
-                input_ids += self.tokenizer.encode(f'<loc_{int(self.tokenizer._loc_extra_ids*group_bbox_list[slice_pointer][0])}>', add_special_tokens=False)
-                input_ids += self.tokenizer.encode(f'<loc_{int(self.tokenizer._loc_extra_ids*group_bbox_list[slice_pointer][1])}>', add_special_tokens=False)
-                input_ids += self.tokenizer.encode(f'<loc_{int(self.tokenizer._loc_extra_ids*group_bbox_list[slice_pointer][2])}>', add_special_tokens=False)
-                input_ids += self.tokenizer.encode(f'<loc_{int(self.tokenizer._loc_extra_ids*group_bbox_list[slice_pointer][3])}>', add_special_tokens=False)
-                bbox_list += [[0,0,0,0]] * 4
+                res_input_ids += self.tokenizer.encode(f'<loc_{int(self.tokenizer._loc_extra_ids*group_bbox_list[slice_pointer][0])}>', add_special_tokens=False)
+                res_input_ids += self.tokenizer.encode(f'<loc_{int(self.tokenizer._loc_extra_ids*group_bbox_list[slice_pointer][1])}>', add_special_tokens=False)
+                res_input_ids += self.tokenizer.encode(f'<loc_{int(self.tokenizer._loc_extra_ids*group_bbox_list[slice_pointer][2])}>', add_special_tokens=False)
+                res_input_ids += self.tokenizer.encode(f'<loc_{int(self.tokenizer._loc_extra_ids*group_bbox_list[slice_pointer][3])}>', add_special_tokens=False)
+                res_bbox_list += [[0,0,0,0]] * 4
                 
-                input_ids += self.tokenizer.encode(f'</extra_t_id_{label_numbering[slice_pointer]}>', add_special_tokens=False)
-                bbox_list.append([0,0,0,0])
+                res_input_ids += self.tokenizer.encode(f'</extra_t_id_{label_numbering[slice_pointer]}>', add_special_tokens=False)
+                res_bbox_list.append([0,0,0,0])
                 idx = group_list[slice_pointer][1]-1
                 slice_pointer += 1
             else:
-                input_ids.append(input_ids[idx])
-                bbox_list.append(bbox_list[idx])
+                res_input_ids.append(input_ids[idx])
+                res_bbox_list.append(bbox_list[idx])
 
             idx += 1
 
-        return input_ids, labels, bbox_list
+        return res_input_ids, labels, res_bbox_list
 
 
 class DataCollatorForT5JointReconstruction:
@@ -174,10 +174,10 @@ class DataCollatorForT5JointReconstruction:
 
     def __call__(self, input_ids, bbox_list, group_list, group_bbox_list, label_numbering):
         
-        input_ids = []
-        bbox_list = []
-
+        res_input_ids = []
+        res_bbox_list = []
         labels = []
+
         for idx in range(len(label_numbering)):
             labels += self.tokenizer.encode(f'<extra_id_{label_numbering[idx]}>', add_special_tokens=False)
             labels += input_ids[group_list[idx][0]:group_list[idx][1]]
@@ -192,16 +192,16 @@ class DataCollatorForT5JointReconstruction:
         
         while idx < len_ID:
             if slice_pointer < L and idx == group_list[slice_pointer][0]:
-                input_ids += self.tokenizer.encode(f'<extra_id_{label_numbering[slice_pointer]}>', add_special_tokens=False)
-                bbox_list.append([0,0,0,0])
+                res_input_ids += self.tokenizer.encode(f'<extra_id_{label_numbering[slice_pointer]}>', add_special_tokens=False)
+                res_bbox_list.append([0,0,0,0])
 
                 idx = group_list[slice_pointer][1]-1
                 slice_pointer += 1
             else:
-                input_ids.append(input_ids[idx])
-                bbox_list.append(bbox_list[idx])
+                res_input_ids.append(input_ids[idx])
+                res_bbox_list.append(bbox_list[idx])
             
             idx += 1
 
-        return input_ids, labels, bbox_list
+        return res_input_ids, labels, res_bbox_list
     

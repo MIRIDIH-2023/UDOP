@@ -151,26 +151,30 @@ class MIRIDIH_Dataset(Dataset):
         width, height = image.size
         image = img_trans_torchvision(image, image_size)
 
+        task = None
+
         if self.task == 'All':
             r = random.randint(0,2)
             if r == 0:
-                self.task = 'Layout Modeling.'
+                task = 'Layout Modeling.'
             elif r == 1:
-                self.task = 'Visual Text Recognition.'
+                task = 'Visual Text Recognition.'
             else:
-                self.task = 'Joint Text-Layout Reconstruction.'
+                task = 'Joint Text-Layout Reconstruction.'
+        else:
+            task = self.task
 
-        if self.task == 'Layout Modeling.':
+        if 'Layout Modeling' in task:
             mask_ratio = 0.75
-        elif self.task == 'Visual Text Recognition.':
+        elif 'Visual Text Recognition' in task:
             mask_ratio = 0.5
-        elif self.task == 'Joint Text-Layout Reconstruction.':
+        elif 'Joint Text-Layout Reconstruction' in task:
             mask_ratio = 0.15
 
         
         total_IDs, total_bbox, total_labels = [], [], []
 
-        total_IDs.extend(tokenizer.encode(self.task, add_special_tokens=False))
+        total_IDs.extend(tokenizer.encode(task, add_special_tokens=False))
         total_bbox += [[0,0,0,0]] * len(total_IDs)
 
         sentinel_idx = 0
@@ -203,7 +207,7 @@ class MIRIDIH_Dataset(Dataset):
 
             ids_list = tokenizer.convert_tokens_to_ids(sentence_text)
  
-            input_ids, labels, bbox_list = self.cls_collator(self.task, ids_list, sentence_bbox, group_list, group_bbox_list, numbering_list)
+            input_ids, labels, bbox_list = self.cls_collator(task, ids_list, sentence_bbox, group_list, group_bbox_list, numbering_list)
 
             total_IDs.extend(input_ids)
             total_bbox.extend(bbox_list)

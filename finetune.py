@@ -9,6 +9,7 @@ from typing import Optional
 
 import evaluate
 import numpy as np
+import torch
 import transformers
 from datasets import ClassLabel, load_dataset, load_metric
 from transformers import (AutoConfig, AutoModelForTokenClassification,
@@ -315,23 +316,35 @@ def main():
         trainer.log_metrics("eval", metrics)
         trainer.save_metrics("eval", metrics)
 
-    # # Predict
-    # if training_args.do_predict:
-    #     logger.info("*** Predict ***")
+    # Predict
+    if training_args.do_predict:
+        logger.info("*** Predict ***")
 
-    #     predictions, labels, metrics = trainer.predict(eval_dataset)
-    #     predictions = np.argmax(predictions, axis=1)
-        
-    #     trainer.log_metrics("test", metrics)
-    #     trainer.save_metrics("test", metrics)
-        
-    #     true_predictions = [label_list[p] for (p, l) in zip(predictions, labels) ]
-    #     # Save predictions
-    #     output_test_predictions_file = os.path.join(training_args.output_dir, "test_predictions.txt")
-    #     if trainer.is_world_process_zero():
-    #         with open(output_test_predictions_file, "w") as writer:
-    #             for prediction in true_predictions:
-    #                 writer.write(prediction + "\n")
+        idx = 0
+        sample = test_dataset.__getitem__(idx)
+
+        input_ids = torch.unsqueeze(sample['input_ids'], dim=0) 
+        labels = sample['labels']
+        seg_data = torch.unsqueeze(sample['seg_data'], dim=0) 
+        im = torch.unsqueeze(sample['image'], dim=0)  
+        visual_seg_data = torch.unsqueeze(sample['visual_seg_data'], dim=0)
+
+        label_text = tokenizer.decode(labels)
+
+        output_ids = model.generate(
+                input_ids,
+                seg_data=seg_data,
+                image=im,
+                visual_seg_data=visual_seg_data,
+                use_cache=True,
+                decoder_start_token_id=tokenizer.pad_token_id,
+                num_beams=1,
+                max_length=512,
+            )
+        output_text = tokenizer.decode(output_ids[0][1:-1])
+        print("Prediction: " + output_text)
+        print("label: " + label_text)
+
 
 if __name__ == "__main__":
     main()

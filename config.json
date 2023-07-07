@@ -1,6 +1,6 @@
 {
     "model_name_or_path" : "udop-unimodel-large-224",
-    "task_name" : "Joint Text-Layout Reconstruction.",
+    "task_name" : "All",
     "output_dir" : "./finetune_miridih",
     "data_dir" : "./data",
     "max_seq_length" : 512,
