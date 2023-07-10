@@ -13,6 +13,8 @@ from torch import default_generator, randperm
 from torch._utils import _accumulate
 from torch.utils.data.dataset import Subset
 from torchvision.transforms import functional as F
+import matplotlib.pyplot as plt
+
 
 logger = logging.getLogger(__name__)
 PREFIX_CHECKPOINT_DIR = 'checkpoint'
@@ -122,6 +124,19 @@ def img_trans_torchvision(image, image_size=224):
     image = trans(image)  # copy to make it writeable
     return image
 
+def undo_img_trans_torchvision(image):
+    # Undo the transformations applied by img_trans_torchvision
+    mean = np.array([0.485, 0.456, 0.406])
+    std = np.array([0.229, 0.224, 0.225])
+    
+    image = np.transpose(image, (1, 2, 0))  # Convert to HWC format
+    
+    image *= std
+    image += mean
+    image = np.clip(image, 0, 1)
+    
+    return np.transpose(image, (2, 0, 1)) # Convert back to CHW format
+
 
 def img_trans_torchvision_int(image, image_size=384):
     trans = T.Compose([
@@ -205,3 +220,33 @@ def random_split(dataset, lengths: Sequence[Union[int, float]],
 
     indices = randperm(sum(lengths), generator=generator).tolist()  # type: ignore[call-overload]
     return [Subset(dataset, indices[offset - length : offset]) for offset, length in zip(_accumulate(lengths), lengths)]
+
+
+def visualize(sample, label_text, prediction_text):
+    original_image = undo_img_trans_torchvision(sample['image'])
+    masked_image = apply_label_mask(original_image, label_text)
+    prediction_masked_image = apply_prediction_mask(original_image, prediction_text)
+    
+    fig, axs = plt.subplots(1, 3, figsize=(12, 4))
+    
+    # Plot the original image
+    axs[0].imshow(original_image.permute(1, 2, 0))
+    axs[0].set_title('Original Image')
+    
+    # Plot the masked image using label text
+    axs[1].imshow(masked_image.transpose(1, 2, 0))
+    axs[1].set_title('Masked Image (Label Text)')
+    
+    # Plot the prediction masked image
+    axs[2].imshow(prediction_masked_image.transpose(1, 2, 0))
+    axs[2].set_title('Prediction Masked Image')
+    
+    plt.show()
+
+def apply_label_mask(original_image, label_text):
+    pass
+
+def apply_prediction_mask(original_image, prediction_text):
+    pass
+
+

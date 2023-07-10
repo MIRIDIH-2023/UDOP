@@ -20,7 +20,7 @@ from transformers import (AutoConfig, AutoModelForTokenClassification,
 from transformers.trainer_utils import get_last_checkpoint, is_main_process
 from transformers.utils import check_min_version
 
-from core.common.utils import random_split
+from core.common.utils import random_split, visualize
 from core.datasets import MIRIDIH_Dataset
 from core.models import (UdopConfig, UdopTokenizer,
                          UdopUnimodelForConditionalGeneration)
@@ -342,8 +342,10 @@ def main():
                 num_beams=1,
                 max_length=512,
             )
-        output_text = tokenizer.decode(output_ids[0][1:-1])
-        print("Prediction: " + output_text)
+        prediction_text = tokenizer.decode(output_ids[0][1:-1])
+
+        visualize(sample, label_text, prediction_text)
+        print("Prediction: " + prediction_text)
         print("label: " + label_text)
 
 
