@@ -15,6 +15,18 @@
             "args": [
                 "config.json"
             ]
+        },
+        {
+            "name": "Inference",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "cwd": "${fileDirname}",
+            "args": [
+                "inference.json"
+            ]
         }
 
     ]

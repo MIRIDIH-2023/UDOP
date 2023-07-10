@@ -213,9 +213,9 @@ class MIRIDIH_Dataset(Dataset):
             total_bbox.extend(bbox_list)
             total_labels.extend(labels)
                 
-            total_IDs.append(tokenizer.eos_token_id)
-            total_bbox += [[0,0,0,0]]
-            total_labels.append(tokenizer.eos_token_id)
+        total_IDs.append(tokenizer.eos_token_id)
+        total_bbox += [[0,0,0,0]]
+        total_labels.append(tokenizer.eos_token_id)
 
         return total_IDs, total_labels, total_bbox, image
 

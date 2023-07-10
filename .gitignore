@@ -1,5 +1,7 @@
 data/
 finetune_miridih/
+jointTextLayout/
+layoutModeling/
 udop-unimodel-large-224/
 wandb/
 .DS_Store
