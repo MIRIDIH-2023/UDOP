@@ -3,6 +3,7 @@
 
 import logging
 import os
+import random
 import sys
 from dataclasses import dataclass, field
 from typing import Optional
@@ -320,7 +321,7 @@ def main():
     if training_args.do_predict:
         logger.info("*** Predict ***")
 
-        idx = 0
+        idx = random.randint(0, len(test_dataset)-1)
         sample = test_dataset.__getitem__(idx)
 
         input_ids = torch.unsqueeze(sample['input_ids'], dim=0) 

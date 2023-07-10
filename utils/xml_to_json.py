@@ -56,8 +56,11 @@ def get_render_bbox(text):
     left, top, right, bottom = map(float, text['Position'].values())
 
     for render in render_pos['c']:
-        if render['t'] == ' ' : continue                  # 단어에서 공백 제거
-        x, a, w, y = map(float, [render['x'], render['a'], render['w'], render['y']])
+        try:
+            x, a, w, y = map(float, [render['x'], render['a'], render['w'], render['y']])
+        except:
+            print("Wrong render pos", end=" ")
+            return None
         left_ = left + x
         right_ = left_ + w
         bottom_ = top + y
