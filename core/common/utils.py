@@ -224,8 +224,10 @@ def random_split(dataset, lengths: Sequence[Union[int, float]],
 
 def visualize(sample, label_text, prediction_text):
     original_image = undo_img_trans_torchvision(sample['image'])
-    masked_image = apply_label_mask(original_image, label_text)
-    prediction_masked_image = apply_prediction_mask(original_image, prediction_text)
+    label_tokens = parse_token(label_text)
+    prediction_tokens = parse_token(prediction_text)
+    masked_image = add_bbox_to_image(original_image, label_tokens, (0, 1, 0, 0.5))
+    prediction_masked_image = add_bbox_to_image(original_image, prediction_tokens, (0, 0, 1, 0.5))
     
     fig, axs = plt.subplots(1, 3, figsize=(12, 4))
     
@@ -234,19 +236,48 @@ def visualize(sample, label_text, prediction_text):
     axs[0].set_title('Original Image')
     
     # Plot the masked image using label text
-    axs[1].imshow(masked_image.transpose(1, 2, 0))
+    axs[1].imshow(masked_image.permute(1, 2, 0))
+    for token in label_tokens:
+        x1, y1, x2, y2 = map(lambda x: round(x*223/500), token['bbox'])
+        axs[1].text(x1, y1, token['text'], fontsize=8, bbox=dict(alpha=0.2))
     axs[1].set_title('Masked Image (Label Text)')
     
     # Plot the prediction masked image
-    axs[2].imshow(prediction_masked_image.transpose(1, 2, 0))
+    axs[2].imshow(prediction_masked_image.permute(1, 2, 0))
+    for token in prediction_tokens:
+        x1, y1, x2, y2 = map(lambda x: round(x*223/500), token['bbox'])
+        axs[2].text(x1, y1, token['text'], fontsize=8, bbox=dict(alpha=0.2))
     axs[2].set_title('Prediction Masked Image')
     
     plt.show()
 
-def apply_label_mask(original_image, label_text):
-    pass
+def add_bbox_to_image(original_image, tokens, color: tuple[float, float, float, float] = (1, 1, 1, 1)):
+    r, g, b, a = color
 
-def apply_prediction_mask(original_image, prediction_text):
-    pass
+    image_np = original_image.clone().permute(1, 2, 0).numpy()
 
+    for token in tokens:
+        x1, y1, x2, y2 = map(lambda x: round(x*223/500), token['bbox'])
+        if x1 > x2: x1, x2 = x2, x1
+        if y1 > y2: y1, y2 = y2, y1
+        image_np[y1:y2, x1:x2, 0] = a * (image_np[y1:y2, x1:x2, 0] + r)
+        image_np[y1:y2, x1:x2, 1] = a * (image_np[y1:y2, x1:x2, 1] + g)
+        image_np[y1:y2, x1:x2, 2] = a * (image_np[y1:y2, x1:x2, 2] + b) 
 
+    new_image = torch.from_numpy(image_np).permute(2, 0, 1)
+
+    return new_image
+
+def parse_token(s):
+    pattern = r'<extra_id_(\d+)>\s*(.*?)<loc_(\d+)><loc_(\d+)><loc_(\d+)><loc_(\d+)>'
+    matches = re.findall(pattern, s)
+
+    output = []
+    for match in matches:
+        id = int(match[0])
+        text = match[1]
+        bbox = tuple(map(int, match[2:]))
+
+        output.append({ 'id': id, 'text': text, 'bbox': bbox })
+
+    return output
