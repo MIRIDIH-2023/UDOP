@@ -139,7 +139,6 @@ class MIRIDIH_Dataset(Dataset):
 
 
     def read_ocr_core_engine(self, file_, image_dir, tokenizer, max_seq_length=None, num_img_embeds=None, image_size=224):
-
         with open(file_, 'rb') as f:
             try:
                 obj = pickle.load(f)
@@ -204,6 +203,9 @@ class MIRIDIH_Dataset(Dataset):
 
             numbering_list = [i for i in range(sentinel_idx,sentinel_idx + len(group_list))]
             sentinel_idx = sentinel_idx + len(group_list)
+
+            if sentinel_idx > 100:      # Mask until sentinel token 99
+                break
 
             ids_list = tokenizer.convert_tokens_to_ids(sentence_text)
  
