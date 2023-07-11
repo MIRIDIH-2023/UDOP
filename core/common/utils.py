@@ -221,8 +221,79 @@ def random_split(dataset, lengths: Sequence[Union[int, float]],
     indices = randperm(sum(lengths), generator=generator).tolist()  # type: ignore[call-overload]
     return [Subset(dataset, indices[offset - length : offset]) for offset, length in zip(_accumulate(lengths), lengths)]
 
+def add_bbox_to_image(original_image, tokens, color: tuple[float, float, float, float] = (1, 1, 1, 1)):
+    r, g, b, a = color
 
-def visualize(sample, label_text, prediction_text):
+    image_np = original_image.clone().permute(1, 2, 0).numpy()
+
+    for token in tokens:
+        x1, y1, x2, y2 = map(lambda x: round(x*223/500), token['bbox'])
+        if x1 > x2: x1, x2 = x2, x1
+        if y1 > y2: y1, y2 = y2, y1
+        image_np[y1:y2, x1:x2, 0] = a * (image_np[y1:y2, x1:x2, 0] + r)
+        image_np[y1:y2, x1:x2, 1] = a * (image_np[y1:y2, x1:x2, 1] + g)
+        image_np[y1:y2, x1:x2, 2] = a * (image_np[y1:y2, x1:x2, 2] + b) 
+
+    new_image = torch.from_numpy(image_np).permute(2, 0, 1)
+
+    return new_image
+
+def parse_token(s):
+    pattern_full = r'<extra_id_(\d+)>\s*(.*?)<loc_(\d+)><loc_(\d+)><loc_(\d+)><loc_(\d+)>'
+    pattern_without_text = r'<extra_l_id_(\d+)><loc_(\d+)><loc_(\d+)><loc_(\d+)><loc_(\d+)>'
+    pattern_without_bbox = r'<extra_t_id_(\d+)>(.*?)$'
+
+    if re.match(pattern_full, s):
+        matches = re.findall(pattern_full, s)
+        tokens = []
+        for match in matches:
+            id = int(match[0])
+            text = match[1]
+            bbox = tuple(map(int, match[2:]))
+            tokens.append({ 'id': id, 'text': text, 'bbox': bbox })
+    elif re.match(pattern_without_text, s):
+        matches = re.findall(pattern_without_text, s)
+        tokens = []
+        for match in matches:
+            id = int(match[0])
+            bbox = tuple(map(int, match[1:]))
+            tokens.append({ 'id': id, 'bbox': bbox })
+    elif re.match(pattern_without_bbox, s):
+        matches = re.findall(pattern_without_bbox, s)
+        tokens = []
+        for match in matches:
+            id = int(match[0])
+            text = match[1]
+            tokens.append({ 'id': id, 'text': text })
+    else:
+        return "Error: The string does not match any known patterns."
+
+    return tokens
+
+def parse_input(s):
+    pattern_text = r'<extra_l_id_(\d+)>\s*(.*?)\s*</extra_l_id_\1>'
+    pattern_bbox = r'<extra_t_id_(\d+)>\s*<loc_(\d+)><loc_(\d+)><loc_(\d+)><loc_(\d+)>\s*</extra_t_id_\1>'
+
+    if re.match(pattern_text, s):
+        matches = re.findall(pattern_text, s)
+        tokens = []
+        for match in matches:
+            id = int(match[0])
+            text = match[1]
+            tokens.append({ 'id': id, 'text': text })
+    elif re.match(pattern_bbox, s):
+        matches = re.findall(pattern_bbox, s)
+        tokens = []
+        for match in matches:
+            id = int(match[0])
+            bbox = tuple(map(int, match[1:]))
+            tokens.append({ 'id': id, 'bbox': bbox })
+    else:
+        return "Error: The string does not match any known patterns."
+
+    return tokens
+
+def visualize_text_layout_task(sample, label_text, prediction_text):
     original_image = undo_img_trans_torchvision(sample['image'])
     label_tokens = parse_token(label_text)
     prediction_tokens = parse_token(prediction_text)
@@ -251,33 +322,56 @@ def visualize(sample, label_text, prediction_text):
     
     plt.show()
 
-def add_bbox_to_image(original_image, tokens, color: tuple[float, float, float, float] = (1, 1, 1, 1)):
-    r, g, b, a = color
+def visualize_text_task(sample, label_text, prediction_text, input_text):
+    original_image = undo_img_trans_torchvision(sample['image'])
+    label_tokens = parse_token(label_text)
+    prediction_tokens = parse_token(prediction_text)
+    input_tokens = parse_input(input_text)
+    masked_image = add_bbox_to_image(original_image, input_tokens, (0, 1, 0, 0.5))
 
-    image_np = original_image.clone().permute(1, 2, 0).numpy()
+    fig, axs = plt.subplots(1, 3, figsize=(12, 4))
 
-    for token in tokens:
-        x1, y1, x2, y2 = map(lambda x: round(x*223/500), token['bbox'])
-        if x1 > x2: x1, x2 = x2, x1
-        if y1 > y2: y1, y2 = y2, y1
-        image_np[y1:y2, x1:x2, 0] = a * (image_np[y1:y2, x1:x2, 0] + r)
-        image_np[y1:y2, x1:x2, 1] = a * (image_np[y1:y2, x1:x2, 1] + g)
-        image_np[y1:y2, x1:x2, 2] = a * (image_np[y1:y2, x1:x2, 2] + b) 
+    # Plot the original image
+    axs[0].imshow(original_image.permute(1, 2, 0))
+    axs[0].set_title('Original Image')
 
-    new_image = torch.from_numpy(image_np).permute(2, 0, 1)
+    # Plot the masked image using label text
+    axs[1].imshow(masked_image.permute(1, 2, 0))
+    for input_token, label_token in zip(input_tokens, label_tokens):
+        x1, y1, x2, y2 = map(lambda x: round(x*223/500), input_token['bbox'])
+        axs[1].text(x1, y1, label_token['text'], fontsize=8, bbox=dict(alpha=0.2))
+    axs[1].set_title('Masked Image (Label Text)')
 
-    return new_image
+    # Plot the prediction masked image
+    axs[2].imshow(masked_image.permute(1, 2, 0))
+    for input_token, prediction_token in zip(input_tokens, prediction_tokens):
+        x1, y1, x2, y2 = map(lambda x: round(x*223/500), input_token['bbox'])
+        axs[2].text(x1, y1, prediction_token['text'], fontsize=8, bbox=dict(alpha=0.2))
+    axs[2].set_title('Masked Image (Prediction Text)')
 
-def parse_token(s):
-    pattern = r'<extra_id_(\d+)>\s*(.*?)<loc_(\d+)><loc_(\d+)><loc_(\d+)><loc_(\d+)>'
-    matches = re.findall(pattern, s)
+def visualize_layout_task(sample, label_text, prediction_text, input_text):
+    original_image = undo_img_trans_torchvision(sample['image'])
+    label_tokens = parse_token(label_text)
+    prediction_tokens = parse_token(prediction_text)
+    input_tokens = parse_input(input_text)
+    masked_image = add_bbox_to_image(original_image, input_tokens, (0, 1, 0, 0.5))
 
-    output = []
-    for match in matches:
-        id = int(match[0])
-        text = match[1]
-        bbox = tuple(map(int, match[2:]))
+    fig, axs = plt.subplots(1, 3, figsize=(12, 4))
 
-        output.append({ 'id': id, 'text': text, 'bbox': bbox })
+    # Plot the original image
+    axs[0].imshow(original_image.permute(1, 2, 0))
+    axs[0].set_title('Original Image')
 
-    return output
+    # Plot the masked image using label layout
+    axs[1].imshow(masked_image.permute(1, 2, 0))
+    for input_token, label_token in zip(input_tokens, label_tokens):
+        x1, y1, x2, y2 = map(lambda x: round(x*223/500), label_token['bbox'])
+        axs[1].text(x1, y1, input_token['text'], fontsize=8, bbox=dict(alpha=0.2))
+    axs[1].set_title('Masked Image (Label Layout)')
+
+    # Plot the prediction masked image
+    axs[2].imshow(masked_image.permute(1, 2, 0))
+    for input_token, prediction_token in zip(input_tokens, prediction_tokens):
+        x1, y1, x2, y2 = map(lambda x: round(x*223/500), prediction_token['bbox'])
+        axs[2].text(x1, y1, input_token['text'], fontsize=8, bbox=dict(alpha=0.2))
+    axs[2].set_title('Masked Image (Prediction Layout)')
