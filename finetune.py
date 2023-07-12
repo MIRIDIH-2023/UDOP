@@ -12,11 +12,9 @@ import evaluate
 import numpy as np
 import torch
 import transformers
-from datasets import ClassLabel, load_dataset, load_metric
 from transformers import (AutoConfig, AutoModelForTokenClassification,
-                          AutoTokenizer, HfArgumentParser,
-                          PreTrainedTokenizerFast, Trainer, TrainingArguments,
-                          set_seed)
+                          AutoTokenizer, HfArgumentParser, Trainer,
+                          TrainingArguments, set_seed)
 from transformers.trainer_utils import get_last_checkpoint, is_main_process
 from transformers.utils import check_min_version
 

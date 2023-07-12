@@ -182,7 +182,7 @@ class MIRIDIH_Dataset(Dataset):
             sentence_text, sentence_bbox = [], []
             for word in text['words']: 
 
-                if word['text'] == ' ':
+                if word['text'].isspace():
                     continue
 
                 bbox = [ 
@@ -191,6 +191,7 @@ class MIRIDIH_Dataset(Dataset):
                     word['box'][2] / width,
                     word['box'][3] / height
                 ]
+                bbox = [max(0, min(1, x)) for x in bbox]
 
                 sub_tokens = tokenizer.tokenize(word['text']) 
                 for sub_token in sub_tokens:
