@@ -179,6 +179,7 @@ class MIRIDIH_Dataset(Dataset):
         sentinel_idx = 0
         
         for idx, text in enumerate(data['form']): 
+            valid_text = True
             sentence_text, sentence_bbox = [], []
             for word in text['words']: 
 
@@ -191,12 +192,18 @@ class MIRIDIH_Dataset(Dataset):
                     word['box'][2] / width,
                     word['box'][3] / height
                 ]
-                bbox = [max(0, min(1, x)) for x in bbox]
 
+                valid_text = all(0 < x < 1 for x in bbox)
+                if not valid_text:
+                    break
+                
                 sub_tokens = tokenizer.tokenize(word['text']) 
                 for sub_token in sub_tokens:
                     sentence_text.append(sub_token)
                     sentence_bbox.append(bbox)
+            
+            if not valid_text:
+                continue
 
             assert len(sentence_text) == len(sentence_bbox), f"text bbox length mismatch"
 
