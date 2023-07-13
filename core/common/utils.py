@@ -301,7 +301,8 @@ def visualize_text_layout_task(sample, label_text, prediction_text, do_save, out
     prediction_masked_image = add_bbox_to_image(original_image, prediction_tokens, (0, 0, 1, 0.5))
     
     fig, axs = plt.subplots(1, 3, figsize=(12, 4))
-    
+    fig.suptitle("Joint Text-Layout Reconstruction", fontsize=14, fontweight='bold')
+
     # Plot the original image
     axs[0].imshow(original_image.permute(1, 2, 0))
     axs[0].set_title('Original Image')
@@ -333,6 +334,7 @@ def visualize_text_task(sample, label_text, prediction_text, input_text, do_save
     masked_image = add_bbox_to_image(original_image, input_tokens, (0, 1, 0, 0.5))
 
     fig, axs = plt.subplots(1, 3, figsize=(12, 4))
+    fig.suptitle("Visual Text Recognition", fontsize=14, fontweight='bold')
 
     # Plot the original image
     axs[0].imshow(original_image.permute(1, 2, 0))
@@ -365,6 +367,7 @@ def visualize_layout_task(sample, label_text, prediction_text, input_text, do_sa
     masked_image = add_bbox_to_image(original_image, label_tokens, (0, 1, 0, 0.5))
 
     fig, axs = plt.subplots(1, 3, figsize=(12, 4))
+    fig.suptitle("Layout Modeling", fontsize=14, fontweight='bold')
 
     # Plot the original image
     axs[0].imshow(original_image.permute(1, 2, 0))

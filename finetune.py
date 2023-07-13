@@ -364,9 +364,9 @@ def main():
                 visualize_text_task(sample, label_text, prediction_text, input_text, data_args.do_save_visualize, training_args.output_dir)
             elif input_text.startswith("Joint Text-Layout Reconstruction"):
                 visualize_text_layout_task(sample, label_text, prediction_text, data_args.do_save_visualize, training_args.output_dir)
-
-            print("Prediction: ", prediction_text)
-            print("\nlabel: ", label_text)
+            
+            print("Label: ", label_text)
+            print("\nPrediction: ", prediction_text)
 
 
 if __name__ == "__main__":
