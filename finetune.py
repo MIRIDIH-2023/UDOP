@@ -18,11 +18,13 @@ from transformers import (AutoConfig, AutoModelForTokenClassification,
 from transformers.trainer_utils import get_last_checkpoint, is_main_process
 from transformers.utils import check_min_version
 
-from core.common.utils import random_split
+from core.common.utils import random_split, visualize_text_layout_task, visualize_text_task, visualize_layout_task
 from core.datasets import MIRIDIH_Dataset
 from core.models import (UdopConfig, UdopTokenizer,
                          UdopUnimodelForConditionalGeneration)
 from core.trainers import DataCollator
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 MODEL_CLASSES = {
     'UdopUnimodel': (UdopConfig, UdopUnimodelForConditionalGeneration, UdopTokenizer),
@@ -119,6 +121,12 @@ class DataTrainingArguments:
             'than this will be truncated, sequences shorter will be padded.'
         },
     )    
+    do_save_visualize: bool = field(
+        default=False,
+        metadata={
+            'help':'Whether to save visualizations in predict'
+        },
+    )
 
 
 @dataclass
@@ -174,7 +182,8 @@ def main():
     training_args.logging_dir = os.path.join(training_args.output_dir, 'runs')
     if model_args.cache_dir is None:
         model_args.cache_dir = os.path.join(training_args.output_dir, 'cache')
-    os.makedirs(model_args.cache_dir, exist_ok=True)
+    if training_args.do_train:
+        os.makedirs(model_args.cache_dir, exist_ok=True)
 
     # Detecting last checkpoint.
     last_checkpoint = None
@@ -318,33 +327,46 @@ def main():
     # Predict
     if training_args.do_predict:
         logger.info("*** Predict ***")
+        os.makedirs(training_args.output_dir, exist_ok=True)
 
-        idx = random.randint(0, len(test_dataset)-1)
-        sample = test_dataset.__getitem__(idx)
+        while True:
+            idx = input(f"Enter idx (or 'quit') in range 0 ~ {len(test_dataset)-1}: ")
+            if idx.lower() == "quit":
+                break
 
-        input_ids = torch.unsqueeze(sample['input_ids'], dim=0) 
-        labels = sample['labels']
-        seg_data = torch.unsqueeze(sample['seg_data'], dim=0) 
-        im = torch.unsqueeze(sample['image'], dim=0)  
-        visual_seg_data = torch.unsqueeze(sample['visual_seg_data'], dim=0)
+            sample = test_dataset.__getitem__(int(idx))
 
-        label_text = tokenizer.decode(labels)
+            input_ids = torch.unsqueeze(sample['input_ids'], dim=0).to(device)
+            labels = sample['labels'].to(device)
+            seg_data = torch.unsqueeze(sample['seg_data'], dim=0).to(device)
+            im = torch.unsqueeze(sample['image'], dim=0).to(device)
+            visual_seg_data = torch.unsqueeze(sample['visual_seg_data'], dim=0).to(device)
 
-        output_ids = model.generate(
-                input_ids,
-                seg_data=seg_data,
-                image=im,
-                visual_seg_data=visual_seg_data,
-                use_cache=True,
-                decoder_start_token_id=tokenizer.pad_token_id,
-                num_beams=1,
-                max_length=512,
-            )
-        prediction_text = tokenizer.decode(output_ids[0][1:-1])
 
-        # visualize(sample, label_text, prediction_text)
-        print("Prediction: " + prediction_text)
-        print("label: " + label_text)
+            output_ids = model.generate(
+                    input_ids,
+                    seg_data=seg_data,
+                    image=im,
+                    visual_seg_data=visual_seg_data,
+                    use_cache=True,
+                    decoder_start_token_id=tokenizer.pad_token_id,
+                    num_beams=1,
+                    max_length=512,
+                )
+            
+            input_text = tokenizer.decode(input_ids[0])
+            prediction_text = tokenizer.decode(output_ids[0][1:-1])
+            label_text = tokenizer.decode(labels)
+
+            if input_text.startswith("Layout Modeling"):
+                visualize_layout_task(sample, label_text, prediction_text, input_text, data_args.do_save_visualize, training_args.output_dir)
+            elif input_text.startswith("Visual Text Recognition"):
+                visualize_text_task(sample, label_text, prediction_text, input_text, data_args.do_save_visualize, training_args.output_dir)
+            elif input_text.startswith("Joint Text-Layout Reconstruction"):
+                visualize_text_layout_task(sample, label_text, prediction_text, data_args.do_save_visualize, training_args.output_dir)
+
+            print("Prediction: ", prediction_text)
+            print("\nlabel: ", label_text)
 
 
 if __name__ == "__main__":

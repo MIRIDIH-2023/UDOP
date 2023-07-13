@@ -113,7 +113,8 @@ class MIRIDIH_Dataset(Dataset):
             "decoder_attention_mask": decoder_attention_mask,
             "image": image,
             'char_ids': char_ids,
-            'char_seg_data': char_bbox_input
+            'char_seg_data': char_bbox_input,
+            "file_name": self.json_file[index]
         }
         assert input_ids is not None
 
