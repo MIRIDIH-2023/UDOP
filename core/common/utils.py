@@ -274,14 +274,14 @@ def parse_input(s):
     pattern_text = r'<extra_l_id_(\d+)>\s*(.*?)\s*</extra_l_id_\1>'
     pattern_bbox = r'<extra_t_id_(\d+)>\s*<loc_(\d+)><loc_(\d+)><loc_(\d+)><loc_(\d+)>\s*</extra_t_id_\1>'
 
-    if re.match(pattern_text, s):
+    if re.search(pattern_text, s):
         matches = re.findall(pattern_text, s)
         tokens = []
         for match in matches:
             id = int(match[0])
             text = match[1]
             tokens.append({ 'id': id, 'text': text })
-    elif re.match(pattern_bbox, s):
+    elif re.search(pattern_bbox, s):
         matches = re.findall(pattern_bbox, s)
         tokens = []
         for match in matches:
@@ -362,7 +362,7 @@ def visualize_layout_task(sample, label_text, prediction_text, input_text, do_sa
     label_tokens = parse_token(label_text)
     prediction_tokens = parse_token(prediction_text)
     input_tokens = parse_input(input_text)
-    masked_image = add_bbox_to_image(original_image, input_tokens, (0, 1, 0, 0.5))
+    masked_image = add_bbox_to_image(original_image, label_tokens, (0, 1, 0, 0.5))
 
     fig, axs = plt.subplots(1, 3, figsize=(12, 4))
 

@@ -1,5 +1,5 @@
 {
-    "model_name_or_path" : "all",
+    "model_name_or_path" : "models/all",
     "task_name" : "All",
     "output_dir" : "./test",
     "data_dir" : "./data",
