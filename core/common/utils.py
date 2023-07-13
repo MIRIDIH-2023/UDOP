@@ -3,7 +3,7 @@ import math
 import os
 import re
 import warnings
-from typing import List, Sequence, Union
+from typing import List, Sequence, Union, Tuple
 
 import numpy as np
 import torch
@@ -221,7 +221,7 @@ def random_split(dataset, lengths: Sequence[Union[int, float]],
     indices = randperm(sum(lengths), generator=generator).tolist()  # type: ignore[call-overload]
     return [Subset(dataset, indices[offset - length : offset]) for offset, length in zip(_accumulate(lengths), lengths)]
 
-def add_bbox_to_image(original_image, tokens, color: tuple[float, float, float, float] = (1, 1, 1, 1)):
+def add_bbox_to_image(original_image, tokens, color: Tuple[float, float, float, float] = (1, 1, 1, 1)):
     r, g, b, a = color
 
     image_np = original_image.clone().permute(1, 2, 0).numpy()
