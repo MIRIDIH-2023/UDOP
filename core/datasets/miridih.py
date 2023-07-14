@@ -156,11 +156,11 @@ class MIRIDIH_Dataset(Dataset):
         if self.task == 'All':
             r = random.randint(0,2)
             if r == 0:
-                task = 'Layout Modeling.'
+                task = 'Layout Modeling'
             elif r == 1:
-                task = 'Visual Text Recognition.'
+                task = 'Visual Text Recognition'
             else:
-                task = 'Joint Text-Layout Reconstruction.'
+                task = 'Joint Text-Layout Reconstruction'
         else:
             task = self.task
 
@@ -174,7 +174,7 @@ class MIRIDIH_Dataset(Dataset):
         
         total_IDs, total_bbox, total_labels = [], [], []
 
-        total_IDs.extend(tokenizer.encode(task, add_special_tokens=False))
+        total_IDs.extend(tokenizer.encode(task+'.', add_special_tokens=False))
         total_bbox += [[0,0,0,0]] * len(total_IDs)
 
         sentinel_idx = 0

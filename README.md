@@ -28,27 +28,41 @@ pip install -r requirements.txt
 .
 ├── LICENSE
 ├── README.md
-├── config.json
-├── core
-├── finetune.py
-├── inference.py
-├── requirements.txt
-├── data                            # Custom dataset
+├── config                          # Train/Inference configuration files
+│   ├── inference.yaml
+│   └── train.yaml
+├── core                            # Main source code
+│   ├── common
+│   ├── datasets
+│   ├── models
+│   └── trainers
+├── data                            # Custom dataset folder
 │   ├── images
-│   │   ├── image_{idx}.png
-│   ├── json_data
-│   │   ├── processed_{idx}.pickle
+│   │   └── image_{idx}.png
+│   └── json_data
+│       └── processed_{idx}.pickle
+├── main.py                     
+├── models                          # Trained models saved to this folder
+├── test                            # Save visualizations during inference
+├── requirements.txt
 ├── udop-unimodel-large-224         # Pretrained UDOP model
 │   ├── config.json
 │   ├── pytorch_model.bin
 │   ├── special_tokens_map.json
 │   ├── spiece.model
 │   └── tokenizer_config.json
-└── utils
+└── utils                           # Utilities
 ```
 
-## Finetune Model
----
+## Scripts
+Setup folder structures as above and modify config/ yaml files for customization
+
+### Finetune UDOP model
 ```
-python finetune.py config.json
+python main.py config/train.yaml
+```
+
+### Inference UDOP model
+```
+python main.py config/inference.yaml
 ```
