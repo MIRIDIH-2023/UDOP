@@ -8,6 +8,7 @@ wandb/
 old_data/
 models/
 test/
+ke-t5/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

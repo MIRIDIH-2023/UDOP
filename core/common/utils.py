@@ -15,7 +15,8 @@ from torch.utils.data.dataset import Subset
 from torchvision.transforms import functional as F
 import matplotlib.pyplot as plt
 
-plt.rc('font', family='NanumBarunGothic') 
+plt.rc('font', family='AppleGothic')
+plt.rcParams['axes.unicode_minus'] = False
 
 logger = logging.getLogger(__name__)
 PREFIX_CHECKPOINT_DIR = 'checkpoint'
