@@ -1,7 +1,7 @@
 import pickle
 import json
 
-file_ = '../data/json/processed_42534.pickle'
+file_ = '../data/json_data/processed_0.pickle'
 
 with open(file_, 'rb') as f:
     obj = pickle.load(f)

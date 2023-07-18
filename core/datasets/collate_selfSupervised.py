@@ -1,13 +1,4 @@
-import math
-import collections
-import pickle
-import os
-import random
-import torch
-
-import numpy as np
-from transformers import PreTrainedTokenizerBase
-
+# Data Collator and Masking for Self-Supervised Tasks
 
 class DataCollatorForSelfSupervisedTasks:
 
@@ -166,7 +157,7 @@ class DataCollatorForT5JointReconstruction:
     """
     def __init__(self, tokenizer=None, meta_path=None, input_length=None, target_length=None, pad_token_id=None, decoder_start_token_id=None):
 
-        self.tokenizer = tokenizer #이전에 만든 udop tokenizer를 불러옴
+        self.tokenizer = tokenizer
         self.input_length = input_length
         self.target_length = target_length
         self.pad_token_id = pad_token_id

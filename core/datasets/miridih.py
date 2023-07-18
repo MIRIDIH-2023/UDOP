@@ -1,23 +1,18 @@
 import json
 import logging
 import os
+import pickle
 import random
 import re
-from io import BytesIO
-import pickle
 
-import pandas as pd
-import requests
 import torch
 from PIL import Image
 from torch.utils.data import Dataset
 from tqdm import tqdm
 
 from core.common.utils import get_visual_bbox, img_trans_torchvision
-from core.datasets.collate_supervised import DataCollatorForSelfSupervisedTasks
-
-EMPTY_BOX = [0, 0, 0, 0]
-SEP_BOX = [1000, 1000, 1000, 1000]
+from core.datasets.collate_selfSupervised import \
+    DataCollatorForSelfSupervisedTasks
 
 logger = logging.getLogger(__name__)
 
@@ -27,43 +22,29 @@ class MIRIDIH_Dataset(Dataset):
 
         """ Structure of data directory:
 
-            --- sample (.csv)
-                   ├── images_url
-                   └── labels_url
-            --- data (folder)
-                   └── processed_sample{index} .json
+            --- images (folder)
+                   └── image_{index}.png
+            --- json_data (folder)
+                   └── processed_{index}.pickle
         """
         assert os.path.isdir(data_args.data_dir), f"Data dir {data_args.data_dir} does not exist!"
         logger.info('Loading Dataset')
 
-        json_dir = os.path.join(data_args.data_dir, 'json_data')
-        img_dir = os.path.join(data_args.data_dir, 'images')
-
-        # csv_path = os.path.join(data_args.data_dir, 'sample.csv')
-
-        # self.main_df = pd.read_csv(csv_path) # xml_sample.csv 파일 저장
-
-        self.sheet_url = 'sheet_url'
-        self.image_url = 'thumbnail_url'
         self.task = data_args.task_name
-
-        self.cls_bbox = EMPTY_BOX[:]
-        self.pad_bbox = EMPTY_BOX[:]
-        self.sep_bbox = SEP_BOX[:]
 
         self.tokenizer = tokenizer
         self.max_seq_length = data_args.max_seq_length
         self.num_img_embeds = 0
-
         self.image_size = data_args.image_size
 
+        self.cls_collator = DataCollatorForSelfSupervisedTasks(tokenizer=tokenizer)
+
+        json_dir = os.path.join(data_args.data_dir, 'json_data')
+        img_dir = os.path.join(data_args.data_dir, 'images')
+
         self.json_file = []
-        self.labels = []
         self.images = []
 
-        self.cls_collator = DataCollatorForSelfSupervisedTasks( #기존에 정의한 토크나이저 선언
-                tokenizer=tokenizer,
-            )
 
         for json_file in tqdm(os.listdir(json_dir)):
             idx = int(re.findall(r'\d+', json_file)[0])
@@ -75,8 +56,8 @@ class MIRIDIH_Dataset(Dataset):
                 self.images.append(image_path)
         
 
-        assert len(self.json_file) == len(self.images)
-        logger.info(f'There are {self.images} images with annotations')
+        assert len(self.json_file) == len(self.images), f"Number of json files and images are not equal!"
+        logger.info(f'There are {len(self.images)} images with annotations')
 
     
     def __len__(self):
@@ -84,9 +65,17 @@ class MIRIDIH_Dataset(Dataset):
     
 
     def __getitem__(self, index):
-        # print(f"Dataloader on: {self.json_file[index]}, index: {index}")
-        input_ids, labels, bbox_input, image = self.read_ocr_core_engine(self.json_file[index], self.images[index] , self.tokenizer, self.max_seq_length, self.num_img_embeds, self.image_size)
-        visual_bbox_input = get_visual_bbox(self.image_size) # (x_min, y_min, x_max, y_max) 형태의 좌표로 이루어진 텐서 반환
+        file_ = self.json_file[index]
+
+        with open(file_, 'rb') as f:
+            try:
+                obj = pickle.load(f)
+                json_data = json.loads(json.dumps(obj, default=str))
+            except:
+                raise AssertionError(f"Wrong file: {file_}")
+            
+        input_ids, labels, bbox_input, image = self.mask_selfSupervised(json_data, self.images[index] , self.tokenizer, self.max_seq_length, self.num_img_embeds, self.image_size)
+        visual_bbox_input = get_visual_bbox(self.image_size) 
         attention_mask = [1] * len(input_ids)
         decoder_attention_mask = [1] * len(labels)
 
@@ -100,6 +89,7 @@ class MIRIDIH_Dataset(Dataset):
         input_ids = torch.tensor(input_ids, dtype=torch.long)
         attention_mask = torch.tensor(attention_mask, dtype=torch.long)
         decoder_attention_mask = torch.tensor(decoder_attention_mask, dtype=torch.long)
+
         assert len(bbox_input) == len(input_ids), f"BBOX_INPUT != INPUT_IDS on file {self.json_file[index]}, index: {index}"
         assert len(bbox_input.size()) == 2, f"BBOX_INPUT SIZE error on file {self.json_file[index]}, index: {index}"
         assert len(char_bbox_input.size()) == 2, f"char_bbox_input size error on file {self.json_file[index]}, index: {index}"
@@ -114,39 +104,15 @@ class MIRIDIH_Dataset(Dataset):
             "image": image,
             'char_ids': char_ids,
             'char_seg_data': char_bbox_input,
-            "file_name": self.json_file[index]
+            "file_name": self.json_file[index],
+            "thumbnail_url": json_data['thumbnail_url']
         }
         assert input_ids is not None
 
         return return_dict
 
-    def pad_tokens(self, input_ids, bbox): #이건 그냥 길이 max_len에 맞게 맞추는 함수
-        # [CLS], sentence, [SEP]
-        tokenized_tokens = self.tokenizer.build_inputs_with_special_tokens(input_ids)
-        start_token, _, end_token = tokenized_tokens[0], tokenized_tokens[1:-1], tokenized_tokens[-1]
 
-        sentence = tokenized_tokens
-        expected_seq_length = self.max_seq_length - self.num_img_embeds
-        mask = torch.zeros(expected_seq_length)
-        mask[:len(sentence)] = 1
-
-        bbox = [self.cls_bbox] + bbox + [self.sep_bbox]
-        while len(sentence) < expected_seq_length:
-            sentence.append(self.tokenizer.pad_token_id)
-            bbox.append(self.pad_bbox)
-
-        assert len(sentence) == len(bbox)
-        return (sentence, mask, bbox, start_token, end_token)
-
-
-    def read_ocr_core_engine(self, file_, image_dir, tokenizer, max_seq_length=None, num_img_embeds=None, image_size=224):
-        with open(file_, 'rb') as f:
-            try:
-                obj = pickle.load(f)
-                data = json.loads(json.dumps(obj, default=str))
-            except:
-                raise AssertionError(f"Wrong file: {file_}")
-
+    def mask_selfSupervised(self, json_data, image_dir, tokenizer, max_seq_length=None, num_img_embeds=None, image_size=224):
         image =  Image.open(image_dir)
         width, height = image.size
         image = img_trans_torchvision(image, image_size)
@@ -179,7 +145,7 @@ class MIRIDIH_Dataset(Dataset):
 
         sentinel_idx = 0
         
-        for idx, text in enumerate(data['form']): 
+        for text in json_data['form']: 
             valid_text = True
             sentence_text, sentence_bbox = [], []
             for word in text['words']: 

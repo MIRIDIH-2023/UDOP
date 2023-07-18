@@ -1,5 +1,6 @@
 {
-    task_name: "All", # All, Layout Modeling, Visual Text Recognition, Joint Text-Layout Reconstruction
+    # All, Layout Modeling, Visual Text Recognition, Joint Text-Layout Reconstruction
+    task_name: "All", 
 
     # Path config
     model_name_or_path: "udop-unimodel-large-224",  # Path to model weight

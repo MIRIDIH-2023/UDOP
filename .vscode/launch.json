@@ -5,7 +5,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Fine-tune UDOP Config",
+            "name": "Fine-tune UDOP",
             "type": "python",
             "request": "launch",
             "program": "${file}",
@@ -13,11 +13,11 @@
             "justMyCode": false,
             "cwd": "${fileDirname}",
             "args": [
-                "train.yaml"
+                "config/train.yaml"
             ]
         },
         {
-            "name": "Inference",
+            "name": "Inference UDOP",
             "type": "python",
             "request": "launch",
             "program": "${file}",
@@ -25,7 +25,7 @@
             "justMyCode": false,
             "cwd": "${fileDirname}",
             "args": [
-                "inference.yaml"
+                "config/inference.yaml"
             ]
         }
 

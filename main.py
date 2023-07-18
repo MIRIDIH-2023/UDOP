@@ -3,7 +3,6 @@
 
 import logging
 import os
-import random
 import sys
 from dataclasses import dataclass, field
 from typing import Optional
@@ -18,7 +17,8 @@ from transformers import (AutoConfig, AutoModelForTokenClassification,
 from transformers.trainer_utils import get_last_checkpoint, is_main_process
 from transformers.utils import check_min_version
 
-from core.common.utils import random_split, visualize_text_layout_task, visualize_text_task, visualize_layout_task
+from core.common.utils import (random_split, visualize_layout_task,
+                               visualize_text_layout_task, visualize_text_task)
 from core.datasets import MIRIDIH_Dataset
 from core.models import (UdopConfig, UdopTokenizer,
                          UdopUnimodelForConditionalGeneration)
@@ -359,14 +359,16 @@ def main():
             label_text = tokenizer.decode(labels)
 
             if input_text.startswith("Layout Modeling"):
-                visualize_layout_task(sample, label_text, prediction_text, input_text, data_args.do_save_visualize, training_args.output_dir)
+                visualize_layout_task(sample, label_text, prediction_text, input_text, data_args.do_save_visualize, training_args.output_dir, idx)
             elif input_text.startswith("Visual Text Recognition"):
-                visualize_text_task(sample, label_text, prediction_text, input_text, data_args.do_save_visualize, training_args.output_dir)
+                visualize_text_task(sample, label_text, prediction_text, input_text, data_args.do_save_visualize, training_args.output_dir, idx)
             elif input_text.startswith("Joint Text-Layout Reconstruction"):
-                visualize_text_layout_task(sample, label_text, prediction_text, data_args.do_save_visualize, training_args.output_dir)
+                visualize_text_layout_task(sample, label_text, prediction_text, data_args.do_save_visualize, training_args.output_dir, idx)
             
-            print("Label: ", label_text)
+            print("Input: ", input_text)
+            print("\nLabel: ", label_text)
             print("\nPrediction: ", prediction_text)
+            print()
 
 
 if __name__ == "__main__":

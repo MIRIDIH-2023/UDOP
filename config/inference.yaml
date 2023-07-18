@@ -1,5 +1,6 @@
 {
-    task_name: "All",                   # All, Layout Modeling, Visual Text Recognition, Joint Text-Layout Reconstruction
+    # All, Layout Modeling, Visual Text Recognition, Joint Text-Layout Reconstruction
+    task_name: "Layout Modeling",                   
 
     # Path config
     model_name_or_path: "models/all",   # Path to model weight

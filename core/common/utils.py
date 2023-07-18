@@ -15,6 +15,7 @@ from torch.utils.data.dataset import Subset
 from torchvision.transforms import functional as F
 import matplotlib.pyplot as plt
 
+plt.rc('font', family='NanumBarunGothic') 
 
 logger = logging.getLogger(__name__)
 PREFIX_CHECKPOINT_DIR = 'checkpoint'
@@ -293,7 +294,8 @@ def parse_input(s):
 
     return tokens
 
-def visualize_text_layout_task(sample, label_text, prediction_text, do_save, output_dir):
+
+def visualize_text_layout_task(sample, label_text, prediction_text, do_save, output_dir, idx):
     original_image = undo_img_trans_torchvision(sample['image'])
     label_tokens = parse_token(label_text)
     prediction_tokens = parse_token(prediction_text)
@@ -323,10 +325,10 @@ def visualize_text_layout_task(sample, label_text, prediction_text, do_save, out
     
     plt.show()
     if do_save:
-        idx = int(re.findall(r'\d+', sample['file_name'])[0])
-        fig.savefig(os.path.join(output_dir, f'{idx}.png'))
+        xml = int(re.findall(r'\d+', sample['file_name'])[0])
+        fig.savefig(os.path.join(output_dir, f'{idx}_xml{xml}.png'))
 
-def visualize_text_task(sample, label_text, prediction_text, input_text, do_save, output_dir):
+def visualize_text_task(sample, label_text, prediction_text, input_text, do_save, output_dir, idx):
     original_image = undo_img_trans_torchvision(sample['image'])
     label_tokens = parse_token(label_text)
     prediction_tokens = parse_token(prediction_text)
@@ -356,10 +358,10 @@ def visualize_text_task(sample, label_text, prediction_text, input_text, do_save
 
     plt.show()
     if do_save:
-        idx = int(re.findall(r'\d+', sample['file_name'])[0])
-        fig.savefig(os.path.join(output_dir, f'{idx}.png'))
+        xml = int(re.findall(r'\d+', sample['file_name'])[0])
+        fig.savefig(os.path.join(output_dir, f'{idx}_xml{xml}.png'))
 
-def visualize_layout_task(sample, label_text, prediction_text, input_text, do_save, output_dir):
+def visualize_layout_task(sample, label_text, prediction_text, input_text, do_save, output_dir, idx):
     original_image = undo_img_trans_torchvision(sample['image'])
     label_tokens = parse_token(label_text)
     prediction_tokens = parse_token(prediction_text)
@@ -389,5 +391,5 @@ def visualize_layout_task(sample, label_text, prediction_text, input_text, do_sa
 
     plt.show()
     if do_save:
-        idx = int(re.findall(r'\d+', sample['file_name'])[0])
-        fig.savefig(os.path.join(output_dir, f'{idx}.png'))
+        xml = int(re.findall(r'\d+', sample['file_name'])[0])
+        fig.savefig(os.path.join(output_dir, f'{idx}_xml{xml}.png'))
