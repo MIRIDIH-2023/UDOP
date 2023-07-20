@@ -78,21 +78,27 @@ class DataCollatorForT5LayoutModeling:
         slice_pointer=0
         L = len(group_list)
         input_len = len(input_ids)
+        mask_flag = False
         for i in range(input_len):
             if slice_pointer < L and i == group_list[slice_pointer][0]:
                 res_input_ids += self.tokenizer.encode(f'<extra_l_id_{label_numbering[slice_pointer]}>', add_special_tokens=False)
+                mask_flag = True
                 res_input_ids.append(input_ids[i])
                 res_bbox_list.append([0,0,0,0])
-                res_bbox_list.append(bbox_list[i])
+                res_bbox_list.append([0,0,0,0])
             elif slice_pointer < L and i == group_list[slice_pointer][1] :
                 res_input_ids += self.tokenizer.encode(f'</extra_l_id_{label_numbering[slice_pointer]}>', add_special_tokens=False)
+                mask_flag = False
                 res_input_ids.append(input_ids[i])
                 res_bbox_list.append([0,0,0,0])
                 res_bbox_list.append(bbox_list[i])
                 slice_pointer += 1
             else:
+                if mask_flag:
+                    res_bbox_list.append([0,0,0,0])
+                else:
+                    res_bbox_list.append(bbox_list[i])
                 res_input_ids.append(input_ids[i])
-                res_bbox_list.append(bbox_list[i])
                 
         if slice_pointer < L and input_len == group_list[slice_pointer][1] :
             res_input_ids += self.tokenizer.encode(f'</extra_l_id_{label_numbering[slice_pointer]}>', add_special_tokens=False)
