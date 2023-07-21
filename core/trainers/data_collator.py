@@ -61,7 +61,7 @@ class DataCollator:
         if features[0] is None:
             return {'placeholder': torch.zeros(size=(2, 2), dtype=torch.long)}
         batch_size = len(features)
-        special_labels = ['text_image_match_labels', 'image', 'class', 'image_mask_label', 'ids_restore', 'ids_keep', 'file_name', 'thumbnail_url']
+        special_labels = ['text_image_match_labels', 'image', 'class', 'image_mask_label', 'ids_restore', 'ids_keep']
         max_len = self.max_length
         max_len_decoder = self.max_length_decoder
         max_len_char = self.max_length_char
@@ -82,6 +82,9 @@ class DataCollator:
             elif key in ['labels', 'image_mask_labels']:
                 pad_value = -100
             elif key in special_labels:
+                continue
+            elif key in ['file_name', 'thumbnail_url']:
+                batch[key] = [f[key] for f in features]
                 continue
 
             if key in ['decoder_input_ids', 'labels', 'decoder_attention_mask', 'decoder_seg_data']:

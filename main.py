@@ -334,15 +334,16 @@ def main():
             if idx.lower() == "quit":
                 break
 
-            sample = test_dataset.__getitem__(int(idx))
+            sample = data_collator([test_dataset.__getitem__(int(idx))])
 
-            input_ids = torch.unsqueeze(sample['input_ids'], dim=0).to(device)
+            input_ids = sample['input_ids'].to(device)
             labels = sample['labels'].to(device)
-            seg_data = torch.unsqueeze(sample['seg_data'], dim=0).to(device)
-            im = torch.unsqueeze(sample['image'], dim=0).to(device)
-            visual_seg_data = torch.unsqueeze(sample['visual_seg_data'], dim=0).to(device)
+            seg_data = sample['seg_data'].to(device)
+            im = sample['image'].to(device)
+            visual_seg_data = sample['visual_seg_data'].to(device)
 
 
+            # Use all data
             output_ids = model.generate(
                     input_ids,
                     seg_data=seg_data,
@@ -353,17 +354,33 @@ def main():
                     num_beams=1,
                     max_length=512,
                 )
+
+            # input_ids = sample['input_ids'].to(device)
+            # seg_data = torch.zeros((input_ids.shape[0],input_ids.shape[1], 4), device=input_ids.device, dtype=torch.float)
+
+            # # Use only text data
+            # output_ids = model.generate(
+            #         input_ids,
+            #         seg_data=seg_data,
+            #         use_cache=True,
+            #         decoder_start_token_id=tokenizer.pad_token_id,
+            #         num_beams=1,
+            #         max_length=512,
+            #     )
             
             input_text = tokenizer.decode(input_ids[0])
             prediction_text = tokenizer.decode(output_ids[0][1:-1])
-            label_text = tokenizer.decode(labels)
+            label_list = labels[0].tolist()
+
+            label_list = label_list[:label_list.index(1)+1] if 1 in label_list else label_list
+            label_text = tokenizer.decode(label_list)
 
             if input_text.startswith("Layout Modeling"):
-                visualize_layout_task(sample, label_text, prediction_text, input_text, data_args.do_save_visualize, training_args.output_dir, idx)
+                visualize_layout_task(sample, label_text, prediction_text, input_text, data_args, training_args.output_dir, idx)
             elif input_text.startswith("Visual Text Recognition"):
-                visualize_text_task(sample, label_text, prediction_text, input_text, data_args.do_save_visualize, training_args.output_dir, idx)
+                visualize_text_task(sample, label_text, prediction_text, input_text, data_args, training_args.output_dir, idx)
             elif input_text.startswith("Joint Text-Layout Reconstruction"):
-                visualize_text_layout_task(sample, label_text, prediction_text, data_args.do_save_visualize, training_args.output_dir, idx)
+                visualize_text_layout_task(sample, label_text, prediction_text, data_args, training_args.output_dir, idx)
             
             print("Input: ", input_text)
             print("\nLabel: ", label_text)

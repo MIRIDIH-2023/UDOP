@@ -229,7 +229,13 @@ def add_bbox_to_image(original_image, tokens, color: Tuple[float, float, float, 
     image_np = original_image.clone().permute(1, 2, 0).numpy()
 
     for token in tokens:
-        x1, y1, x2, y2 = map(lambda x: round(x*223/500), token['bbox'])
+        x1, y1, x2, y2 = token['bbox']
+
+        x1 = round(x1 * original_image.shape[2] / 500)
+        x2 = round(x2 * original_image.shape[2] / 500)
+        y1 = round(y1 * original_image.shape[1] / 500)
+        y2 = round(y2 * original_image.shape[1] / 500)
+
         if x1 > x2: x1, x2 = x2, x1
         if y1 > y2: y1, y2 = y2, y1
         image_np[y1:y2, x1:x2, 0] = a * (image_np[y1:y2, x1:x2, 0] + r)
@@ -362,14 +368,18 @@ def visualize_text_task(sample, label_text, prediction_text, input_text, do_save
         xml = int(re.findall(r'\d+', sample['file_name'])[0])
         fig.savefig(os.path.join(output_dir, f'{idx}_xml{xml}.png'))
 
-def visualize_layout_task(sample, label_text, prediction_text, input_text, do_save, output_dir, idx):
-    original_image = undo_img_trans_torchvision(sample['image'])
+def visualize_layout_task(sample, label_text, prediction_text, input_text, data_args, output_dir, idx):
+    idx = int(re.findall(r'\d+', sample['file_name'][0])[0])
+    image_path = os.path.join(data_args.data_dir, 'images', f'image_{idx}.png')
+    original_image = T.ToTensor()(Image.open(image_path))
+    # original_image = undo_img_trans_torchvision(sample['image'][0])
     label_tokens = parse_token(label_text)
     prediction_tokens = parse_token(prediction_text)
     input_tokens = parse_input(input_text)
     masked_image = add_bbox_to_image(original_image, label_tokens, (0, 1, 0, 0.5))
+    predicted_image = add_bbox_to_image(original_image, prediction_tokens, (0, 1, 0, 0.5))
 
-    fig, axs = plt.subplots(1, 3, figsize=(12, 4))
+    fig, axs = plt.subplots(1, 3, figsize=(16, 8))
     fig.suptitle("Layout Modeling", fontsize=14, fontweight='bold')
 
     # Plot the original image
@@ -378,19 +388,27 @@ def visualize_layout_task(sample, label_text, prediction_text, input_text, do_sa
 
     # Plot the masked image using label layout
     axs[1].imshow(masked_image.permute(1, 2, 0))
-    for input_token, label_token in zip(input_tokens, label_tokens):
-        x1, y1, x2, y2 = map(lambda x: round(x*223/500), label_token['bbox'])
-        axs[1].text(x1, y1, input_token['text'], fontsize=8, bbox=dict(alpha=0.2))
+    for idx, (input_token, label_token) in enumerate(zip(input_tokens, label_tokens)):
+        x1, y1, x2, y2 = label_token['bbox']
+        x1 = round(x1 * original_image.shape[2] / 500)
+        x2 = round(x2 * original_image.shape[2] / 500)
+        y1 = round(y1 * original_image.shape[1] / 500)
+        y2 = round(y2 * original_image.shape[1] / 500)
+        axs[1].text(x1, y1, idx, fontsize=8, bbox=dict(alpha=0.2))
     axs[1].set_title('Masked Image (Label Layout)')
 
     # Plot the prediction masked image
-    axs[2].imshow(masked_image.permute(1, 2, 0))
-    for input_token, prediction_token in zip(input_tokens, prediction_tokens):
-        x1, y1, x2, y2 = map(lambda x: round(x*223/500), prediction_token['bbox'])
-        axs[2].text(x1, y1, input_token['text'], fontsize=8, bbox=dict(alpha=0.2))
+    axs[2].imshow(predicted_image.permute(1, 2, 0))
+    for idx, (input_token, prediction_token) in enumerate(zip(input_tokens, prediction_tokens)):
+        x1, y1, x2, y2 = prediction_token['bbox']
+        x1 = round(x1 * original_image.shape[2] / 500)
+        x2 = round(x2 * original_image.shape[2] / 500)
+        y1 = round(y1 * original_image.shape[1] / 500)
+        y2 = round(y2 * original_image.shape[1] / 500)
+        axs[2].text(x1, y1, idx, fontsize=8, bbox=dict(alpha=0.2))
     axs[2].set_title('Masked Image (Prediction Layout)')
 
     plt.show()
-    if do_save:
+    if data_args.do_save_visualize:
         xml = int(re.findall(r'\d+', sample['file_name'])[0])
         fig.savefig(os.path.join(output_dir, f'{idx}_xml{xml}.png'))
