@@ -352,7 +352,7 @@ def visualize_text_layout_task(sample, label_text, prediction_text, data_args, o
     plt.tight_layout()
     plt.show()
     if data_args.do_save_visualize:
-        xml = int(re.findall(r'\d+', sample['file_name'])[0])
+        xml = int(re.findall(r'\d+', sample['file_name'][0])[0])
         fig.savefig(os.path.join(output_dir, f'{idx}_xml{xml}.png'))
 
 def visualize_text_task(sample, label_text, prediction_text, input_text, data_args, output_dir, idx):
@@ -404,7 +404,7 @@ def visualize_text_task(sample, label_text, prediction_text, input_text, data_ar
     plt.tight_layout()
     plt.show()
     if data_args.do_save_visualize:
-        xml = int(re.findall(r'\d+', sample['file_name'])[0])
+        xml = int(re.findall(r'\d+', sample['file_name'][0])[0])
         fig.savefig(os.path.join(output_dir, f'{idx}_xml{xml}.png'))
 
 def visualize_layout_task(sample, label_text, prediction_text, input_text, data_args, output_dir, idx):
@@ -456,5 +456,5 @@ def visualize_layout_task(sample, label_text, prediction_text, input_text, data_
     plt.tight_layout()
     plt.show()
     if data_args.do_save_visualize:
-        xml = int(re.findall(r'\d+', sample['file_name'])[0])
+        xml = int(re.findall(r'\d+', sample['file_name'][0])[0])
         fig.savefig(os.path.join(output_dir, f'{idx}_xml{xml}.png'))

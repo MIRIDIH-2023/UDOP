@@ -552,6 +552,8 @@ class UdopUnimodelForConditionalGeneration(T5ForConditionalGeneration):
                     inputs_patches = x_padded
                 else:
                     inputs_patches = x
+            else:
+                num_patches = None
 
             # Convert encoder inputs in embeddings if needed
             encoder_outputs = self.encoder(
