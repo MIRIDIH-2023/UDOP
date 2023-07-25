@@ -295,7 +295,7 @@ def group_bbox(bbox_lst, group_lst):
                 if i[2] > b:
                     b = i[2]
                 if i[3] > r:
-                    b = i[3]
+                    r = i[3]
             bbox_group_lst.append([t,l,b,r])
     
     return bbox_group_lst
