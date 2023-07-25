@@ -15,8 +15,6 @@ from torch.utils.data.dataset import Subset
 from torchvision.transforms import functional as F
 import matplotlib.pyplot as plt
 
-plt.rc('font', family='AppleGothic')
-plt.rcParams['axes.unicode_minus'] = False
 
 logger = logging.getLogger(__name__)
 PREFIX_CHECKPOINT_DIR = 'checkpoint'
@@ -302,7 +300,7 @@ def parse_input(s):
     return tokens
 
 
-def visualize_text_layout_task(sample, label_text, prediction_text, data_args, output_dir, idx):
+def visualize_text_layout_task(sample, label_text, prediction_text, data_args, output_dir, index):
     idx_ = int(re.findall(r'\d+', sample['file_name'][0])[0])
     image_path = os.path.join(data_args.data_dir , 'images', f'image_{idx_}.png')
     original_image = T.ToTensor()(Image.open(image_path))
@@ -353,9 +351,9 @@ def visualize_text_layout_task(sample, label_text, prediction_text, data_args, o
     plt.show()
     if data_args.do_save_visualize:
         xml = int(re.findall(r'\d+', sample['file_name'][0])[0])
-        fig.savefig(os.path.join(output_dir, f'{idx}_xml{xml}.png'))
+        fig.savefig(os.path.join(output_dir, f'{index}_xml{xml}.png'))
 
-def visualize_text_task(sample, label_text, prediction_text, input_text, data_args, output_dir, idx):
+def visualize_text_task(sample, label_text, prediction_text, input_text, data_args, output_dir, index):
     idx_ = int(re.findall(r'\d+', sample['file_name'][0])[0])
     image_path = os.path.join(data_args.data_dir , 'images', f'image_{idx_}.png')
     original_image = T.ToTensor()(Image.open(image_path))
@@ -405,9 +403,9 @@ def visualize_text_task(sample, label_text, prediction_text, input_text, data_ar
     plt.show()
     if data_args.do_save_visualize:
         xml = int(re.findall(r'\d+', sample['file_name'][0])[0])
-        fig.savefig(os.path.join(output_dir, f'{idx}_xml{xml}.png'))
+        fig.savefig(os.path.join(output_dir, f'{index}_xml{xml}.png'))
 
-def visualize_layout_task(sample, label_text, prediction_text, input_text, data_args, output_dir, idx):
+def visualize_layout_task(sample, label_text, prediction_text, input_text, data_args, output_dir, index):
     idx_ = int(re.findall(r'\d+', sample['file_name'][0])[0])
     image_path = os.path.join(data_args.data_dir , 'images', f'image_{idx_}.png')
     original_image = T.ToTensor()(Image.open(image_path))
@@ -457,4 +455,4 @@ def visualize_layout_task(sample, label_text, prediction_text, input_text, data_
     plt.show()
     if data_args.do_save_visualize:
         xml = int(re.findall(r'\d+', sample['file_name'][0])[0])
-        fig.savefig(os.path.join(output_dir, f'{idx}_xml{xml}.png'))
+        fig.savefig(os.path.join(output_dir, f'{index}_xml{xml}.png'))

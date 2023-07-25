@@ -336,38 +336,43 @@ def main():
 
             sample = data_collator([test_dataset.__getitem__(int(idx))])
 
-            input_ids = sample['input_ids'].to(device)
-            labels = sample['labels'].to(device)
-            seg_data = sample['seg_data'].to(device)
-            im = sample['image'].to(device)
-            visual_seg_data = sample['visual_seg_data'].to(device)
+            if use_all_data:=True: 
+                input_ids = sample['input_ids'].to(device)
+                labels = sample['labels'].to(device)
+                seg_data = sample['seg_data'].to(device)
+                im = sample['image'].to(device)
+                visual_seg_data = sample['visual_seg_data'].to(device)
 
 
-            # Use all data
-            output_ids = model.generate(
-                    input_ids,
-                    seg_data=seg_data,
-                    image=im,
-                    visual_seg_data=visual_seg_data,
-                    use_cache=True,
-                    decoder_start_token_id=tokenizer.pad_token_id,
-                    num_beams=1,
-                    max_length=512,
+                # Use all data
+                output_ids = model.generate(
+                        input_ids,
+                        seg_data=seg_data,
+                        image=im,
+                        visual_seg_data=visual_seg_data,
+                        use_cache=True,
+                        decoder_start_token_id=tokenizer.pad_token_id,
+                        num_beams=1,
+                        max_length=512,
                 )
 
-            # input_ids = sample['input_ids'].to(device)
-            # seg_data = torch.zeros((input_ids.shape[0],input_ids.shape[1], 4), device=input_ids.device, dtype=torch.float)
+            else:   # Text only, image padded
+                input_ids = sample['input_ids'].to(device)
+                seg_data = torch.zeros((input_ids.shape[0],input_ids.shape[1], 4), device=input_ids.device, dtype=torch.float)
+                im = torch.zeros(im.shape, device=input_ids.device, dtype=torch.float)
 
-            # # Use only text data
-            # output_ids = model.generate(
-            #         input_ids,
-            #         seg_data=seg_data,
-            #         use_cache=True,
-            #         decoder_start_token_id=tokenizer.pad_token_id,
-            #         num_beams=1,
-            #         max_length=512,
-            #     )
-            
+                # Use only text data
+                output_ids = model.generate(
+                        input_ids,
+                        seg_data=seg_data,
+                        image=im,
+                        visual_seg_data=visual_seg_data,
+                        use_cache=True,
+                        decoder_start_token_id=tokenizer.pad_token_id,
+                        num_beams=1,
+                        max_length=512,
+                    )
+                
             input_text = tokenizer.decode(input_ids[0])
             prediction_text = tokenizer.decode(output_ids[0][1:-1])
             label_list = labels[0].tolist()
