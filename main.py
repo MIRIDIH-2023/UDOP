@@ -42,6 +42,7 @@ class DataTrainingArguments:
     Arguments pertaining to what data we are going to input our model for training and eval.
     """
     task_name: Optional[str] = field(default="ner", metadata={"help": "The name of the task (ner, pos...)."})
+    unit: Optional[str] = field(default="word", metadata={"help": "The unit of tokenize (word, token)."})
     data_dir: Optional[str] = field(
         default=None, metadata={"help": "local dataset stored location"},
     )

@@ -31,6 +31,7 @@ class MIRIDIH_Dataset(Dataset):
         logger.info('Loading Dataset')
 
         self.task = data_args.task_name
+        self.unit = data_args.unit
 
         self.tokenizer = tokenizer
         self.max_seq_length = data_args.max_seq_length
@@ -137,6 +138,16 @@ class MIRIDIH_Dataset(Dataset):
         elif 'Joint Text-Layout Reconstruction' in task:
             mask_ratio = 0.15
 
+        tokenize_unit = None
+
+        if self.unit == 'word' :
+            tokenize_unit = 'word'
+        elif self.unit == 'token' :
+            tokenize_unit = 'token'
+        else :
+            tokenize_unit = self.unit
+
+        assert (tokenize_unit == 'word' or tokenize_unit == 'token'), f"Wrong tokenize unit!"
         
         total_IDs, total_bbox, total_labels = [], [], []
 
@@ -148,8 +159,9 @@ class MIRIDIH_Dataset(Dataset):
         for text in json_data['form']: 
             valid_text = True
             sentence_text, sentence_bbox = [], []
-            for word in text['words']: 
-
+            for word in text['words']:
+                word_text= []
+                word_bbox= []
                 if word['text'].isspace():
                     continue
 
@@ -166,23 +178,36 @@ class MIRIDIH_Dataset(Dataset):
                 
                 sub_tokens = tokenizer.tokenize(word['text']) 
                 for sub_token in sub_tokens:
-                    sentence_text.append(sub_token)
+                    word_text.append(sub_token)
+                    word_bbox.append(bbox)
+                
+                if tokenize_unit == 'word' :
+                    sentence_text.append(word_text)
                     sentence_bbox.append(bbox)
+                elif tokenize_unit == 'token' :
+                    sentence_text.extend(word_text)
+                    sentence_bbox.extend(word_bbox)
             
             if not valid_text:
                 continue
 
             assert len(sentence_text) == len(sentence_bbox), f"text bbox length mismatch"
 
+            print(len(sentence_bbox), end=' ')
             group_list, group_bbox_list = mask_process(sentence_bbox, mask_ratio=mask_ratio)
-
+            print(group_list)
             numbering_list = [i for i in range(sentinel_idx,sentinel_idx + len(group_list))]
             sentinel_idx = sentinel_idx + len(group_list)
 
             if sentinel_idx > 100:      # Mask until sentinel token 99
                 break
-
-            ids_list = tokenizer.convert_tokens_to_ids(sentence_text)
+            
+            ids_list = []
+            if tokenize_unit == 'word' :
+                for word_text in sentence_text:
+                    ids_list.append(tokenizer.convert_tokens_to_ids(word_text))
+            elif tokenize_unit == 'token' :
+                ids_list = tokenizer.convert_tokens_to_ids(sentence_text)
  
             input_ids, labels, bbox_list = self.cls_collator(task, ids_list, sentence_bbox, group_list, group_bbox_list, numbering_list)
 
