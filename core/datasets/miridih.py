@@ -193,9 +193,8 @@ class MIRIDIH_Dataset(Dataset):
 
             assert len(sentence_text) == len(sentence_bbox), f"text bbox length mismatch"
 
-            print(len(sentence_bbox), end=' ')
             group_list, group_bbox_list = mask_process(sentence_bbox, mask_ratio=mask_ratio)
-            print(group_list)
+
             numbering_list = [i for i in range(sentinel_idx,sentinel_idx + len(group_list))]
             sentinel_idx = sentinel_idx + len(group_list)
 
