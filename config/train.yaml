@@ -36,4 +36,6 @@
     save_steps: 2500,
     save_total_limit: 1,
 
+    # tokenize_unit config              # word, token
+    unit: "word",
 }

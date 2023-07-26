@@ -80,25 +80,26 @@ class DataCollatorForT5LayoutModeling:
         input_len = len(input_ids)
         mask_flag = False
         for i in range(input_len):
+            input_ids[i] = input_ids[i] if isinstance(input_ids[i], list) else [input_ids[i]]
             if slice_pointer < L and i == group_list[slice_pointer][0]:
-                res_input_ids += self.tokenizer.encode(f'<extra_l_id_{label_numbering[slice_pointer]}>', add_special_tokens=False)
                 mask_flag = True
-                res_input_ids.append(input_ids[i])
+                res_input_ids += self.tokenizer.encode(f'<extra_l_id_{label_numbering[slice_pointer]}>', add_special_tokens=False)
                 res_bbox_list.append([0,0,0,0])
-                res_bbox_list.append([0,0,0,0])
-            elif slice_pointer < L and i == group_list[slice_pointer][1] :
-                res_input_ids += self.tokenizer.encode(f'</extra_l_id_{label_numbering[slice_pointer]}>', add_special_tokens=False)
+                res_input_ids.extend([ID for ID in input_ids[i]])
+                res_bbox_list.extend([[0,0,0,0]] * len(input_ids[i]))
+            elif slice_pointer < L and i == group_list[slice_pointer][1]:
                 mask_flag = False
-                res_input_ids.append(input_ids[i])
+                res_input_ids += self.tokenizer.encode(f'</extra_l_id_{label_numbering[slice_pointer]}>', add_special_tokens=False)
                 res_bbox_list.append([0,0,0,0])
-                res_bbox_list.append(bbox_list[i])
+                res_input_ids.extend([ID for ID in input_ids[i]])
+                res_bbox_list.extend([bbox_list[i]] * len(input_ids[i]))
                 slice_pointer += 1
             else:
                 if mask_flag:
-                    res_bbox_list.append([0,0,0,0])
+                    res_bbox_list.extend([[0,0,0,0]] * len(input_ids[i]))
                 else:
-                    res_bbox_list.append(bbox_list[i])
-                res_input_ids.append(input_ids[i])
+                    res_bbox_list.extend([bbox_list[i]] * len(input_ids[i]))
+                res_input_ids.extend([ID for ID in input_ids[i]])
                 
         if slice_pointer < L and input_len == group_list[slice_pointer][1] :
             res_input_ids += self.tokenizer.encode(f'</extra_l_id_{label_numbering[slice_pointer]}>', add_special_tokens=False)
@@ -126,14 +127,16 @@ class DataCollatorForT5VisTextRec:
 
         for idx in range(len(label_numbering)):
             labels += self.tokenizer.encode(f'<extra_t_id_{label_numbering[idx]}>', add_special_tokens=False)
-            labels += input_ids[group_list[idx][0]:group_list[idx][1]]
-
+            for ids in input_ids[group_list[idx][0]:group_list[idx][1]] :
+                ids = ids if isinstance(ids, list) else [ids]
+                labels.extend([i for i in ids])
 
         slice_pointer, idx = 0, 0
         L = len(group_list)
         len_ID = len(input_ids)
 
         while idx < len_ID:
+            input_ids[idx] = input_ids[idx] if isinstance(input_ids[idx], list) else [input_ids[idx]]
             if slice_pointer < L and idx == group_list[slice_pointer][0]:
                 res_input_ids += self.tokenizer.encode(f'<extra_t_id_{label_numbering[slice_pointer]}>', add_special_tokens=False)
                 res_bbox_list.append([0,0,0,0])
@@ -149,8 +152,8 @@ class DataCollatorForT5VisTextRec:
                 idx = group_list[slice_pointer][1]-1
                 slice_pointer += 1
             else:
-                res_input_ids.append(input_ids[idx])
-                res_bbox_list.append(bbox_list[idx])
+                res_input_ids.extend([ID for ID in input_ids[idx]])
+                res_bbox_list.extend([bbox_list[idx]] * len(input_ids[idx]))
 
             idx += 1
 
@@ -177,7 +180,9 @@ class DataCollatorForT5JointReconstruction:
 
         for idx in range(len(label_numbering)):
             labels += self.tokenizer.encode(f'<extra_id_{label_numbering[idx]}>', add_special_tokens=False)
-            labels += input_ids[group_list[idx][0]:group_list[idx][1]]
+            for ids in input_ids[group_list[idx][0]:group_list[idx][1]] :
+                ids = ids if isinstance(ids, list) else [ids]
+                labels.extend([i for i in ids])
             labels += self.tokenizer.encode(f'<loc_{int(self.tokenizer._loc_extra_ids * group_bbox_list[idx][0])}>', add_special_tokens=False)
             labels += self.tokenizer.encode(f'<loc_{int(self.tokenizer._loc_extra_ids * group_bbox_list[idx][1])}>', add_special_tokens=False)
             labels += self.tokenizer.encode(f'<loc_{int(self.tokenizer._loc_extra_ids * group_bbox_list[idx][2])}>', add_special_tokens=False)
@@ -188,6 +193,7 @@ class DataCollatorForT5JointReconstruction:
         len_ID = len(input_ids)
         
         while idx < len_ID:
+            input_ids[idx] = input_ids[idx] if isinstance(input_ids[idx], list) else [input_ids[idx]]
             if slice_pointer < L and idx == group_list[slice_pointer][0]:
                 res_input_ids += self.tokenizer.encode(f'<extra_id_{label_numbering[slice_pointer]}>', add_special_tokens=False)
                 res_bbox_list.append([0,0,0,0])
@@ -195,8 +201,8 @@ class DataCollatorForT5JointReconstruction:
                 idx = group_list[slice_pointer][1]-1
                 slice_pointer += 1
             else:
-                res_input_ids.append(input_ids[idx])
-                res_bbox_list.append(bbox_list[idx])
+                res_input_ids.extend([ID for ID in input_ids[idx]])
+                res_bbox_list.extend([bbox_list[idx]] * len(input_ids[idx]))
             
             idx += 1
 
