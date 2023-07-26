@@ -283,19 +283,19 @@ def group_bbox(bbox_lst, group_lst):
         if len(target) == 1:
             bbox_group_lst.append(*target)
         else:
-            t = target[0][0]
-            l = target[0][1]
-            b = target[0][2]
-            r = target[0][3]
+            l = target[0][0]
+            t = target[0][1]
+            r = target[0][2]
+            b = target[0][3]
             for i in target[1:]:
-                if i[0] < t:
-                    t = i[0]
-                if i[1] < l:
-                    l = i[1]
-                if i[2] > b:
-                    b = i[2]
-                if i[3] > r:
-                    r = i[3]
-            bbox_group_lst.append([t,l,b,r])
+                if i[0] < l:
+                    l = i[0]
+                if i[1] < t:
+                    t = i[1]
+                if i[2] > r:
+                    r = i[2]
+                if i[3] > b:
+                    b = i[3]
+            bbox_group_lst.append([l,t,r,b])
     
     return bbox_group_lst
