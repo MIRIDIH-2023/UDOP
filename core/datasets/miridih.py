@@ -6,6 +6,7 @@ import random
 import re
 
 import torch
+import numpy as np
 from PIL import Image
 from torch.utils.data import Dataset
 from tqdm import tqdm
@@ -132,7 +133,7 @@ class MIRIDIH_Dataset(Dataset):
             task = self.task
 
         if 'Layout Modeling' in task:
-            mask_ratio = 0.75
+            mask_ratio = 1.0 # masking 100% => seg data [0, 0, 0, 0]
         elif 'Visual Text Recognition' in task:
             mask_ratio = 0.5
         elif 'Joint Text-Layout Reconstruction' in task:
@@ -156,7 +157,22 @@ class MIRIDIH_Dataset(Dataset):
 
         sentinel_idx = 0
         
-        for text in json_data['form']: 
+        bbox_container = []
+        for text in json_data['form'] :
+            bbox = [
+                text['box'][0] / width,
+                text['box'][1] / height,
+                text['box'][2] / width,
+                text['box'][3] / height
+            ]
+            bbox_container.append(bbox)
+            
+        bbox_container = np.array(bbox_container)
+        ind = np.lexsort((bbox_container[:, 0], bbox_container[:, 1]))
+        bbox_container = bbox_container[ind]
+        
+        for i in ind: 
+            text = json_data['form'][i]
             valid_text = True
             sentence_text, sentence_bbox = [], []
             for word in text['words']:
