@@ -38,4 +38,8 @@
 
     # tokenize_unit config              # word, token
     unit: "word",
+
+    # learning config
+    curriculm: "yes",                   # yes, no
+    # num_level: 5,                       # maybe need to consider num_train_epochs, Will be implemented later
 }

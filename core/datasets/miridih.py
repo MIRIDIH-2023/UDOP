@@ -38,6 +38,7 @@ class MIRIDIH_Dataset(Dataset):
         self.max_seq_length = data_args.max_seq_length
         self.num_img_embeds = 0
         self.image_size = data_args.image_size
+        self.layout_modeling_masking_ratio = 0.75
 
         self.cls_collator = DataCollatorForSelfSupervisedTasks(tokenizer=tokenizer)
 
@@ -60,7 +61,6 @@ class MIRIDIH_Dataset(Dataset):
 
         assert len(self.json_file) == len(self.images), f"Number of json files and images are not equal!"
         logger.info(f'There are {len(self.images)} images with annotations')
-
     
     def __len__(self):
         return len(self.images)
@@ -112,7 +112,9 @@ class MIRIDIH_Dataset(Dataset):
         assert input_ids is not None
 
         return return_dict
-
+    
+    def set_layout_modeling_masking_ratio(self, new_ratio) :
+        self.layout_modeling_masking_ratio = new_ratio
 
     def mask_selfSupervised(self, json_data, image_dir, tokenizer, max_seq_length=None, num_img_embeds=None, image_size=224):
         image =  Image.open(image_dir)
@@ -133,7 +135,7 @@ class MIRIDIH_Dataset(Dataset):
             task = self.task
 
         if 'Layout Modeling' in task:
-            mask_ratio = 1.0 # masking 100% => seg data [0, 0, 0, 0]
+            mask_ratio = self.layout_modeling_masking_ratio # masking 100% => seg data [0, 0, 0, 0]
         elif 'Visual Text Recognition' in task:
             mask_ratio = 0.5
         elif 'Joint Text-Layout Reconstruction' in task:

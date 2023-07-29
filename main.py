@@ -22,7 +22,7 @@ from core.common.utils import (random_split, visualize_layout_task,
 from core.datasets import MIRIDIH_Dataset
 from core.models import (UdopConfig, UdopTokenizer,
                          UdopUnimodelForConditionalGeneration)
-from core.trainers import DataCollator
+from core.trainers import DataCollator, CurriculumTrainer
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -43,6 +43,8 @@ class DataTrainingArguments:
     """
     task_name: Optional[str] = field(default="ner", metadata={"help": "The name of the task (ner, pos...)."})
     unit: Optional[str] = field(default="word", metadata={"help": "The unit of tokenize (word, token)."})
+    curriculm: Optional[str] = field(default="no", metadata={"help": "The choice of curruculm learning (yes or no)."})
+    # num_level: Optional[int] = field(default=None, metadata={"help": "The number of levels, and it must be set when curruculm learning."})
     data_dir: Optional[str] = field(
         default=None, metadata={"help": "local dataset stored location"},
     )
@@ -287,7 +289,7 @@ def main():
         return metric.compute(predictions=predictions, references=labels)
 
     # Initialize our Trainer
-    trainer = Trainer(
+    trainer = CurriculumTrainer(
         model=model,
         args=training_args,
         train_dataset=train_dataset if training_args.do_train else None,
