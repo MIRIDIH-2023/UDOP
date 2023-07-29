@@ -167,9 +167,10 @@ class MIRIDIH_Dataset(Dataset):
             ]
             bbox_container.append(bbox)
             
+        # sorting bbox relative to left, top
         bbox_container = np.array(bbox_container)
         ind = np.lexsort((bbox_container[:, 0], bbox_container[:, 1]))
-        bbox_container = bbox_container[ind]
+        bbox_container = bbox_container[ind]  # variable for debugging, not important 
         
         for i in ind: 
             text = json_data['form'][i]
