@@ -38,7 +38,7 @@ class MIRIDIH_Dataset(Dataset):
         self.max_seq_length = data_args.max_seq_length
         self.num_img_embeds = 0
         self.image_size = data_args.image_size
-        self.layout_modeling_masking_ratio = 0.75
+        self.layout_modeling_masking_ratio = 0.75 if data_args.curriculm == 'no' else 0.1
 
         self.cls_collator = DataCollatorForSelfSupervisedTasks(tokenizer=tokenizer)
 
