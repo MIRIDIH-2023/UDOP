@@ -10,23 +10,24 @@ from tqdm import tqdm
 import random
 
 
-class MyModel():
-    def __init__(self, model, pair_class):
+class SBERT():
+    def __init__(self, model, pair_class=None):
         
         self.model = model
         self.pair_class = pair_class
-        self.keyword_list = pair_class.keyword_list
-        self.data_list = pair_class.data_list
-        self.text_list = pair_class.text_list
-        
-        pairs, labels = self.pair_class.get_both_pairs_labels()
-        self.sample_data = list(zip(pairs, labels))
-        self.train_data, self.test_data = train_test_split(self.sample_data, test_size=0.05, random_state=42)
-        self.train_examples = [InputExample(texts=[data[0][0], data[0][1]], label=float(data[1])) for data in self.train_data]
-        self.train_dataloader = DataLoader(self.train_examples, shuffle=True, batch_size=256)
-        self.train_loss = losses.CosineSimilarityLoss(self.model)
-        self.num_epochs = 4
-        self.warmup_steps = math.ceil(len(self.train_dataloader) * self.num_epochs * 0.1)
+
+        if pair_class:
+            self.keyword_list = pair_class.keyword_list
+            self.data_list = pair_class.data_list
+            self.text_list = pair_class.text_list
+            pairs, labels = self.pair_class.get_both_pairs_labels()
+            self.sample_data = list(zip(pairs, labels))
+            self.train_data, self.test_data = train_test_split(self.sample_data, test_size=0.05, random_state=42)
+            self.train_examples = [InputExample(texts=[data[0][0], data[0][1]], label=float(data[1])) for data in self.train_data]
+            self.train_dataloader = DataLoader(self.train_examples, shuffle=True, batch_size=256)
+            self.train_loss = losses.CosineSimilarityLoss(self.model)
+            self.num_epochs = 4
+            self.warmup_steps = math.ceil(len(self.train_dataloader) * self.num_epochs * 0.1)
         
         
         self.keyword_embedding_set = []
@@ -70,7 +71,7 @@ class MyModel():
         print("making embedding vector...")
         for keyword, json in tqdm( zip(self.keyword_list, self.data_list) ):
             self.keyword_embedding_set.append( (json, self.model.encode(keyword)) ) #json과 임베딩벡터 pair로 저장. json에 모든 정보가 있음
-            break
+
         print("done!")
         
         print("saving vectors...")

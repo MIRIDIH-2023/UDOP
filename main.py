@@ -3,26 +3,34 @@
 
 import logging
 import os
+import re
 import sys
 from dataclasses import dataclass, field
+from io import BytesIO
 from typing import Optional
 
 import evaluate
 import numpy as np
+import requests
 import torch
 import transformers
+from PIL import Image
+from sentence_transformers import SentenceTransformer
 from transformers import (AutoConfig, AutoModelForTokenClassification,
                           AutoTokenizer, HfArgumentParser, Trainer,
                           TrainingArguments, set_seed)
 from transformers.trainer_utils import get_last_checkpoint, is_main_process
 from transformers.utils import check_min_version
 
-from core.common.utils import (random_split, visualize_layout_task,
+from core.common.utils import (img_trans_torchvision, random_split,
+                               visualize_layout_task,
                                visualize_text_layout_task, visualize_text_task)
 from core.datasets import MIRIDIH_Dataset
 from core.models import (UdopConfig, UdopTokenizer,
                          UdopUnimodelForConditionalGeneration)
 from core.trainers import DataCollator
+from SBERT.model import SBERT
+from SBERT.utils import *
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -330,6 +338,11 @@ def main():
         logger.info("*** Predict ***")
         os.makedirs(training_args.output_dir, exist_ok=True)
 
+        model_path='./SBERT/sbert_keyword_extractor_2023_07_18' #모델 저장 경로
+        sbert_model = SentenceTransformer(model_path)
+        sbert_model = SBERT(sbert_model)
+        sbert_model.load_emedding_vector(save_path="./SBERT/embedded",file_name="keyword_embedding_list.pickle") #load vector for get_keyword
+
         while True:
             idx = input(f"Enter idx (or 'quit') in range 0 ~ {len(test_dataset)-1}: ")
             if idx.lower() == "quit":
@@ -337,36 +350,57 @@ def main():
 
             sample = data_collator([test_dataset.__getitem__(int(idx))])
 
-            if use_all_data:=True: 
-                input_ids = sample['input_ids'].to(device)
-                labels = sample['labels'].to(device)
-                seg_data = sample['seg_data'].to(device)
-                im = sample['image'].to(device)
-                visual_seg_data = sample['visual_seg_data'].to(device)
+            input_ids = sample['input_ids'].to(device)
+            labels = sample['labels'].to(device)
+            seg_data = sample['seg_data'].to(device)
+            im = sample['image'].to(device)
+            visual_seg_data = sample['visual_seg_data'].to(device)
 
+            save_im_to_generate = [im]
+            images = []                     # used for saving recommended, and blank image
 
-                # Use all data
-                output_ids = model.generate(
-                        input_ids,
-                        seg_data=seg_data,
-                        image=im,
-                        visual_seg_data=visual_seg_data,
-                        use_cache=True,
-                        decoder_start_token_id=tokenizer.pad_token_id,
-                        num_beams=1,
-                        max_length=512,
-                )
+            if use_text_image_only:=True:   # Text only, image added
+                K = 2
+                K = int(input("Enter the number of images to be recommended in range 1 ~ 5: "))
+                while (K < 1 or K > 5) :
+                    K = int(input("Wrong number! \nPlease enter the number in range 1 ~ 5: "))
 
-            else:   # Text only, image padded
-                input_ids = sample['input_ids'].to(device)
+                # set seg_data (bounding box) 0
                 seg_data = torch.zeros((input_ids.shape[0],input_ids.shape[1], 4), device=input_ids.device, dtype=torch.float)
-                im = torch.zeros(im.shape, device=input_ids.device, dtype=torch.float)
 
-                # Use only text data
+                # SBERT get image
+                input_text_raw = tokenizer.decode(input_ids[0])
+                processed_text = convert_to_sbert_input(input_text_raw)
+                recommended = sbert_model.get_top_keyword(processed_text,top_k=K) #--> [ {'json','keyword','thumbnail_url','sheet_url'}, {}... ]
+                
+                # save recommended image and image used to predict label
+                for rc in recommended :
+                    try:
+                        im = Image.open(BytesIO(requests.get(rc['thumbnail_url']).content)) # Need update for top k
+                    except:
+                        print(f"Error at loading image, {rc['thumbnail_url']}")
+                        im = torch.zeros(im.shape, device=input_ids.device, dtype=torch.float)
+
+                    images.append(im)
+                    im = img_trans_torchvision(im, 224)
+                    im = torch.unsqueeze(im, dim=0).to(device)
+                    save_im_to_generate.append(im)
+
+                # save blank image 
+                im = Image.new('RGB', (500, 500), 'rgb(0, 0, 0)') 
+                images.append(im)
+                
+                # save blank image to predict label
+                im = img_trans_torchvision(im, 224)
+                im = torch.unsqueeze(im, dim=0).to(device)
+                save_im_to_generate.append(im)
+
+            save_predicted_text = []
+            for image in save_im_to_generate:
                 output_ids = model.generate(
                         input_ids,
                         seg_data=seg_data,
-                        image=im,
+                        image=image,
                         visual_seg_data=visual_seg_data,
                         use_cache=True,
                         decoder_start_token_id=tokenizer.pad_token_id,
@@ -374,15 +408,18 @@ def main():
                         max_length=512,
                     )
                 
-            input_text = tokenizer.decode(input_ids[0])
-            prediction_text = tokenizer.decode(output_ids[0][1:-1])
+                print('generate complete!')
+                prediction_text = tokenizer.decode(output_ids[0][1:-1])
+                save_predicted_text.append(prediction_text)
+                
+            input_text = tokenizer.decode(input_ids[0])                # text in layout 
+            
             label_list = labels[0].tolist()
-
             label_list = label_list[:label_list.index(1)+1] if 1 in label_list else label_list
-            label_text = tokenizer.decode(label_list)
+            label_text = tokenizer.decode(label_list)                  # correct layout 
 
             if input_text.startswith("Layout Modeling"):
-                visualize_layout_task(sample, label_text, prediction_text, input_text, data_args, training_args.output_dir, idx)
+                visualize_layout_task(sample, label_text, save_predicted_text, input_text, data_args, training_args.output_dir, images, idx)
             elif input_text.startswith("Visual Text Recognition"):
                 visualize_text_task(sample, label_text, prediction_text, input_text, data_args, training_args.output_dir, idx)
             elif input_text.startswith("Joint Text-Layout Reconstruction"):
@@ -390,9 +427,13 @@ def main():
             
             print("Input: ", input_text)
             print("\nLabel: ", label_text)
-            print("\nPrediction: ", prediction_text)
+            print("\nPrediction: ", save_predicted_text)
             print()
 
+def convert_to_sbert_input(s):
+    matches = re.findall(r'<extra_l_id_\d+>(.*?)</extra_l_id_\d+>', s)
+    cleaned_matches = [match.strip() for match in matches]
+    return '\n'.join(cleaned_matches) + '\n'
 
 if __name__ == "__main__":
     main()

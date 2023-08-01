@@ -13,7 +13,7 @@ from sentence_transformers import SentenceTransformer
 
 from utils import *
 from make_pair import make_pair
-from model import MyModel
+from model import SBERT
 
 #config 파일 용도 변수들
 ######################
@@ -21,7 +21,7 @@ model_path='./sbert_keyword_extractor_2023_07_18' #모델 저장 경로
 
 folder_path = "../data/SBERT/json_data2" #folder_path = '/content/data/json_data2' -> 압축 푼 folder path
 data_path = "../data/SBERT/json_20230707_SBERT수정본.zip" # data_path = '/content/drive/MyDrive/data/json_20230707_SBERT수정본.zip' -> json 압축 폴더 위치
-extract_path='../data' #extract_path = '/content/data' -> 압축 풀 장소
+extract_path='../data/SBERT' # extract_path = '/content/data' -> 압축 풀 장소
 
 sbert_train = False #학습 여부
 sbert_infer = False #정확도 확인 여부
@@ -39,9 +39,10 @@ else:
 
 
 keys_list, texts_list, datas_list = processing_data(folder_path=folder_path,data_path=data_path,extract_path=extract_path)
+#pair_class = make_pair([],[],[]) #class for processing
 pair_class = make_pair(keys_list,texts_list,datas_list) #class for processing
-sbert_model = MyModel(model,pair_class)
-
+sbert_model = SBERT(model,pair_class)
+#sbert_model = SBERT(model)
 
 if sbert_train:
     sbert_model.train(output_path=output_path)
