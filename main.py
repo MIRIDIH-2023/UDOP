@@ -354,6 +354,8 @@ def main():
     if training_args.do_predict:
         logger.info("*** Predict ***")
         os.makedirs(training_args.output_dir, exist_ok=True)
+        
+        test_dataset.dataset.set_layout_modeling_masking_ratio(1.0)
 
         model_path='./SBERT/sbert_keyword_extractor_2023_07_18' #모델 저장 경로
         sbert_model = SentenceTransformer(model_path)
