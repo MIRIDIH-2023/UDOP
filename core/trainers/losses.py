@@ -15,7 +15,7 @@ def huber_loss(pred,label, threshold):
 
 
 
-def custom_loss(pred,label, threshold, eps=1e-6):
+def custom_huber(pred,label, threshold, eps=1e-6):
     
     mae = np.abs(pred-label)
     ln_loss = np.log( mae + eps)   # ln(x), 미분하면 1/x
@@ -26,14 +26,19 @@ def custom_loss(pred,label, threshold, eps=1e-6):
                     mse, 
                     threshold**2  * (ln_loss - np.log(threshold) + 0.5) )
     
+    loss = np.mean(loss) / 5
     return loss
 
-a = np.random.normal(loc=250, scale=10, size=10)
-a = np.clip(np.round(a), 0, 500).astype(int)
 
-b = np.random.normal(loc=250, scale=10, size=10)
-b = np.clip(np.round(b), 0, 500).astype(int)
-
-print(custom_loss(a,b,2)) # 0~26
-
-#0 500  0 ~26   7픽셀까지는 mse
+def custom_huber2(pred,label, threshold, eps=1e-6):
+    
+    mae = np.abs(pred-label)
+    ln_loss = np.log( mae + eps)   # ln(x), 미분하면 1/x
+    
+    loss_map = ln_loss < threshold  #equal as...   mae < e^threshold 7.8xx
+    loss = np.where( loss_map, 
+                    mae, 
+                    threshold * (ln_loss - np.log(threshold)+1))
+    
+    loss = np.mean(loss) / 5
+    return loss

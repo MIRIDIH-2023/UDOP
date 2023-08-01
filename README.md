@@ -28,19 +28,24 @@ pip install -r requirements.txt
 .
 ├── LICENSE
 ├── README.md
-├── config                          # Train/Inference configuration files
+├── SBERT/                           # Integrate SBERT for template recommendation
+│   ├── embedded/
+│   └── sbert_keyword_extractor_2023_07_18/
+├── config/                          # Train/Inference configuration files
 │   ├── inference.yaml
 │   └── train.yaml
-├── core                            # Main source code
-│   ├── common
-│   ├── datasets
-│   ├── models
-│   └── trainers
-├── data                            # Custom dataset folder
-│   ├── images
+├── core/                            # Main source code
+│   ├── common/
+│   ├── datasets/
+│   ├── models/
+│   └── trainers/
+├── data/                            # Custom dataset folder
+│   ├── images/
 │   │   └── image_{idx}.png
-│   └── json_data
-│       └── processed_{idx}.pickle
+│   ├── json_data/
+│   │   └── processed_{idx}.pickle
+│   └── SBERT/
+│       └── json_data2/
 ├── main.py                     
 ├── models                          # Trained models saved to this folder
 ├── test                            # Save visualizations during inference

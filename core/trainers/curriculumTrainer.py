@@ -8,6 +8,7 @@ import torch.nn.functional as F
 from transformers import Trainer
 from transformers.trainer_callback import TrainerCallback
 from transformers.trainer_utils import IntervalStrategy
+from . import losses
 
 logger = logging.getLogger(__name__)
 
@@ -64,12 +65,15 @@ class CurriculumTrainer(Trainer):
 
         # If there are any location tokens in the batch, compute MSE loss
         if torch.any(mask_mse):
+          input = max_logits_indices[mask_mse].float()
+          target = labels[mask_mse].float()
+
           if self.loss_fct == "huber":
-            loc_loss = F.smooth_l1_loss(max_logits_indices[mask_mse].float(), labels[mask_mse].float())
+            loc_loss = F.smooth_l1_loss(input, target)
           elif self.loss_fct == "mse":
-            input = (max_logits_indices[mask_mse] / 500).float()
-            target = (labels[mask_mse] / 500).float()
             loc_loss = F.mse_loss(input, target)
+          elif self.loss_fct == "custom_huber":
+            loc_loss = losses.custom_huber2(input, target, 2)
 
         loss = ce_loss + loc_loss
 

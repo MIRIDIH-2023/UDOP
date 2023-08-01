@@ -1,6 +1,6 @@
 {
     # All, Layout Modeling, Visual Text Recognition, Joint Text-Layout Reconstruction
-    task_name: "All", 
+    task_name: "Layout Modeling", 
 
     # Path config
     model_name_or_path: "udop-unimodel-large-224",  # Path to model weight
@@ -46,6 +46,6 @@
     curri_start_MR: 0.5,
 
     # loss config
-    loss_fct: "mse",                   # None, mse, huber
+    loss_fct: "custom_huber",                   # None, mse, huber, custom_huber
 
 }
