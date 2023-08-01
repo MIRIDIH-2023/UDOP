@@ -38,7 +38,7 @@ class MIRIDIH_Dataset(Dataset):
         self.max_seq_length = data_args.max_seq_length
         self.num_img_embeds = 0
         self.image_size = data_args.image_size
-        self.layout_modeling_masking_ratio = 0.75 if data_args.curriculm == 'no' else 0.1
+        self.layout_modeling_masking_ratio = 0.75 if data_args.curriculm == 'no' else data_args.curri_start_MR
 
         self.cls_collator = DataCollatorForSelfSupervisedTasks(tokenizer=tokenizer)
 
@@ -115,6 +115,9 @@ class MIRIDIH_Dataset(Dataset):
     
     def set_layout_modeling_masking_ratio(self, new_ratio) :
         self.layout_modeling_masking_ratio = new_ratio
+    
+    def get_layout_modeling_masking_ratio(self) :
+        return self.layout_modeling_masking_ratio
 
     def mask_selfSupervised(self, json_data, image_dir, tokenizer, max_seq_length=None, num_img_embeds=None, image_size=224):
         image =  Image.open(image_dir)
@@ -159,23 +162,7 @@ class MIRIDIH_Dataset(Dataset):
 
         sentinel_idx = 0
         
-        bbox_container = []
-        for text in json_data['form'] :
-            bbox = [
-                text['box'][0] / width,
-                text['box'][1] / height,
-                text['box'][2] / width,
-                text['box'][3] / height
-            ]
-            bbox_container.append(bbox)
-            
-        # sorting bbox relative to left, top
-        bbox_container = np.array(bbox_container)
-        ind = np.lexsort((bbox_container[:, 0], bbox_container[:, 1]))
-        bbox_container = bbox_container[ind]  # variable for debugging, not important 
-        
-        for i in ind: 
-            text = json_data['form'][i]
+        for text in json_data['form']:
             valid_text = True
             sentence_text, sentence_bbox = [], []
             for word in text['words']:

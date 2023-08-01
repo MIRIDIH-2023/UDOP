@@ -41,5 +41,7 @@
 
     # learning config
     curriculm: "yes",                   # yes, no
-    # num_level: 5,                       # maybe need to consider num_train_epochs, Will be implemented later
+    curri_patience: 10,
+    curri_threshold: 0.01,
+    curri_start_MR: 0.5,
 }
