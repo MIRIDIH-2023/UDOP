@@ -138,7 +138,7 @@ class MIRIDIH_Dataset(Dataset):
             task = self.task
 
         if 'Layout Modeling' in task:
-            mask_ratio = self.layout_modeling_masking_ratio # masking 100% => seg data [0, 0, 0, 0]
+            mask_ratio = self.layout_modeling_masking_ratio 
         elif 'Visual Text Recognition' in task:
             mask_ratio = 0.5
         elif 'Joint Text-Layout Reconstruction' in task:
