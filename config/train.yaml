@@ -38,4 +38,14 @@
 
     # tokenize_unit config              # word, token
     unit: "word",
+
+    # learning config
+    curriculum: true,                   # true, false
+    curri_patience: 10,
+    curri_threshold: 0.01,
+    curri_start_MR: 0.5,
+
+    # loss config
+    loss_fct: "mse",                   # None, mse, huber
+
 }

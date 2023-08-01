@@ -22,7 +22,7 @@ from core.common.utils import (random_split, visualize_layout_task,
 from core.datasets import MIRIDIH_Dataset
 from core.models import (UdopConfig, UdopTokenizer,
                          UdopUnimodelForConditionalGeneration)
-from core.trainers import DataCollator
+from core.trainers import DataCollator, CurriculumTrainer, elevateMRCallback
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -43,6 +43,10 @@ class DataTrainingArguments:
     """
     task_name: Optional[str] = field(default="ner", metadata={"help": "The name of the task (ner, pos...)."})
     unit: Optional[str] = field(default="word", metadata={"help": "The unit of tokenize (word, token)."})
+    curriculum: Optional[str] = field(default="no", metadata={"help": "The choice of curriculum learning (yes or no)."})
+    curri_patience: Optional[int] = field(default=None, metadata={"help": "Number of times it was not been updated"})
+    curri_threshold: Optional[int] = field(default=None, metadata={"help": "Criteria for determining that an update has been made"})
+    curri_start_MR: Optional[int] = field(default=None, metadata={"help": "The starting point of masking ratio from curri_start_MR to 100%"})
     data_dir: Optional[str] = field(
         default=None, metadata={"help": "local dataset stored location"},
     )
@@ -166,6 +170,10 @@ class ModelArguments:
         default="original_full",
         metadata={"help": "Attention type: BigBird configuruation only. Choices: block_sparse (default) or original_full"},
     )
+    loss_fct: str = field(
+        default=None,
+        metadata={"help": "Attention type: BigBird configuruation only. Choices: block_sparse (default) or original_full"},
+    )
 
 
 def main():
@@ -285,9 +293,16 @@ def main():
         logits, labels = eval_pred
         predictions = np.argmax(logits, axis=-1)
         return metric.compute(predictions=predictions, references=labels)
+    
+    elevateMRcallback = elevateMRCallback(
+        train_dataset=train_dataset,
+        eval_dataset=eval_dataset,
+        early_stopping_patience=data_args.curri_patience,
+        early_stopping_threshold=data_args.curri_threshold,
+    )
 
     # Initialize our Trainer
-    trainer = Trainer(
+    trainer = CurriculumTrainer(
         model=model,
         args=training_args,
         train_dataset=train_dataset if training_args.do_train else None,
@@ -295,6 +310,8 @@ def main():
         tokenizer=tokenizer,
         data_collator=data_collator,
         compute_metrics=compute_metrics,
+        callbacks=[elevateMRcallback] if data_args.curriculum else None,
+        loss_fct=model_args.loss_fct,
     )
 
     # Training
