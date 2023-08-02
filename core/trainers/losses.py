@@ -1,4 +1,5 @@
 import numpy as np
+import torch
 
 
 def huber_loss(pred,label, threshold):
@@ -30,15 +31,14 @@ def custom_huber(pred,label, threshold, eps=1e-6):
     return loss
 
 
-def custom_huber2(pred,label, threshold, eps=1e-6):
-    
-    mae = np.abs(pred-label)
-    ln_loss = np.log( mae + eps)   # ln(x), 미분하면 1/x
-    
-    loss_map = ln_loss < threshold  #equal as...   mae < e^threshold 7.8xx
-    loss = np.where( loss_map, 
-                    mae, 
-                    threshold * (ln_loss - np.log(threshold)+1))
-    
-    loss = np.mean(loss) / 5
+def custom_huber2(pred, label, threshold, eps=1e-6):
+    mae = torch.abs(pred - label)
+    ln_loss = torch.log(mae + eps)  # ln(x), the derivative is 1/x
+
+    loss_map = ln_loss < threshold  # equal as... mae < e^threshold 7.8xx
+    loss = torch.where(loss_map,
+                       mae,
+                       threshold *(ln_loss - torch.log(torch.Tensor([threshold]).to('cuda'))+1))
+
+    loss = loss.mean() / 5
     return loss

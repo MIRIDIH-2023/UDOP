@@ -46,8 +46,8 @@ class CurriculumTrainer(Trainer):
       if self.loss_fct is None:
         super().compute_loss(model, inputs, return_outputs)
       else:
-        labels = inputs.get("labels")
         logits = model(**inputs).logits
+        labels = inputs.get("labels").to(logits.device)
 
         ce_loss = 0
         loc_loss = 0 # Location token loss
@@ -55,6 +55,8 @@ class CurriculumTrainer(Trainer):
         # Compute Cross Entropy (CE) loss for all elements in the logits and labels tensor.
         weight = torch.ones(logits.size(2))  # Initialize with weight 1 for all classes
         weight[32500:33001] = 0  # Set weight 0 for the specified range [33000, 32500]
+        weight = weight.to(logits.device)
+        
 
         ce_loss_fct = nn.CrossEntropyLoss(weight=weight, ignore_index=-100)
         ce_loss = ce_loss_fct(logits.view(-1, logits.size(-1)), labels.view(-1))
