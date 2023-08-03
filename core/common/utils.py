@@ -221,6 +221,26 @@ def random_split(dataset, lengths: Sequence[Union[int, float]],
     indices = randperm(sum(lengths), generator=generator).tolist()  # type: ignore[call-overload]
     return [Subset(dataset, indices[offset - length : offset]) for offset, length in zip(_accumulate(lengths), lengths)]
 
+# TODO: check for the case when boxes are rotated
+def calculate_iou(box1, box2):
+    # Parse x1, y1, x2, y2 from location tokens
+    x1_1, y1_1, x2_1, y2_1 = [int(box1[i][5:-1]) for i in range(4)]
+    x1_2, y1_2, x2_2, y2_2 = [int(box2[i][5:-1]) for i in range(4)]
+
+
+    # Calculate intersection area
+    intersection_area = max(0, min(x2_1, x2_2) - max(x1_1, x1_2)) * max(0, min(y2_1, y2_2) - max(y1_1, y1_2))
+
+    # Calculate union area
+    box1_area = (x2_1 - x1_1) * (y2_1 - y1_1)
+    box2_area = (x2_2 - x1_2) * (y2_2 - y1_2)
+    union_area = box1_area + box2_area - intersection_area
+
+    # Calculate IOU
+    iou = intersection_area / union_area if union_area > 0 else 0
+    return iou
+
+
 def add_bbox_to_image(original_image, tokens, color: Tuple[float, float, float, float] = (1, 1, 1, 1)):
     r, g, b, a = color
 

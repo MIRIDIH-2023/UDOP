@@ -1,19 +1,20 @@
+import math
 import os
-from zipfile import ZipFile
-import re
 import pickle
 import random
-from tqdm import tqdm
-from torch.utils.data import DataLoader
-from sklearn.model_selection import train_test_split
-import math
-from sentence_transformers.evaluation import EmbeddingSimilarityEvaluator
-from sklearn.metrics.pairwise import cosine_similarity
-from sentence_transformers import SentenceTransformer
+import re
+from zipfile import ZipFile
 
-from utils import *
 from make_pair import make_pair
 from model import SBERT
+from sentence_transformers import SentenceTransformer
+from sentence_transformers.evaluation import EmbeddingSimilarityEvaluator
+from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.model_selection import train_test_split
+from torch.utils.data import DataLoader
+from tqdm import tqdm
+
+from utils import *
 
 #config 파일 용도 변수들
 ######################

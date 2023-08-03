@@ -28,7 +28,7 @@ from core.common.utils import (img_trans_torchvision, random_split,
 from core.datasets import MIRIDIH_Dataset
 from core.models import (UdopConfig, UdopTokenizer,
                          UdopUnimodelForConditionalGeneration)
-from core.trainers import DataCollator, CurriculumTrainer, elevateMRCallback
+from core.trainers import CurriculumTrainer, DataCollator, elevateMRCallback
 from SBERT.model import SBERT
 from SBERT.utils import *
 
@@ -51,7 +51,7 @@ class DataTrainingArguments:
     """
     task_name: Optional[str] = field(default="ner", metadata={"help": "The name of the task (ner, pos...)."})
     unit: Optional[str] = field(default="word", metadata={"help": "The unit of tokenize (word, token)."})
-    curriculum: Optional[str] = field(default="no", metadata={"help": "The choice of curriculum learning (yes or no)."})
+    curriculum: Optional[str] = field(default=False, metadata={"help": "The choice of curriculum learning (True or False)."})
     curri_patience: Optional[int] = field(default=None, metadata={"help": "Number of times it was not been updated"})
     curri_threshold: Optional[int] = field(default=None, metadata={"help": "Criteria for determining that an update has been made"})
     curri_start_MR: Optional[int] = field(default=None, metadata={"help": "The starting point of masking ratio from curri_start_MR to 100%"})
@@ -342,7 +342,9 @@ def main():
     if training_args.do_eval:
         logger.info("*** Evaluate ***")
 
-        metrics = trainer.evaluate()
+        metrics = trainer.compute_custom_metrics(model=model, dataset=test_dataset)
+
+        #metrics = trainer.evaluate()
 
         max_val_samples = data_args.max_val_samples if data_args.max_val_samples is not None else len(eval_dataset)
         metrics["eval_samples"] = min(max_val_samples, len(eval_dataset))
