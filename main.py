@@ -344,10 +344,8 @@ def main():
 
         metrics = trainer.compute_custom_metrics(model=model, dataset=test_dataset)
 
-        #metrics = trainer.evaluate()
-
-        max_val_samples = data_args.max_val_samples if data_args.max_val_samples is not None else len(eval_dataset)
-        metrics["eval_samples"] = min(max_val_samples, len(eval_dataset))
+        max_val_samples = data_args.max_val_samples if data_args.max_val_samples is not None else len(test_dataset)
+        metrics["eval_samples"] = min(max_val_samples, len(test_dataset))
 
         trainer.log_metrics("eval", metrics)
         trainer.save_metrics("eval", metrics)

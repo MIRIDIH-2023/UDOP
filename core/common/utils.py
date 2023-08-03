@@ -232,8 +232,8 @@ def calculate_iou(box1, box2):
     intersection_area = max(0, min(x2_1, x2_2) - max(x1_1, x1_2)) * max(0, min(y2_1, y2_2) - max(y1_1, y1_2))
 
     # Calculate union area
-    box1_area = (x2_1 - x1_1) * (y2_1 - y1_1)
-    box2_area = (x2_2 - x1_2) * (y2_2 - y1_2)
+    box1_area = np.abs(x2_1 - x1_1) * np.abs(y2_1 - y1_1)
+    box2_area = np.abs(x2_2 - x1_2) * np.abs(y2_2 - y1_2)
     union_area = box1_area + box2_area - intersection_area
 
     # Calculate IOU

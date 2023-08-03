@@ -103,6 +103,8 @@ class CurriculumTrainer(Trainer):
 
       for i in tqdm(range(len(dataset))):
           sample = self.data_collator([dataset[i]])
+
+          # Move tensors to the model's device
           for key, value in sample.items():
               if torch.is_tensor(value):
                   sample[key] = value.to(self.model.device)
@@ -112,14 +114,18 @@ class CurriculumTrainer(Trainer):
               pred = torch.argmax(logits, dim=2)
               label = sample['labels'].to(self.model.device)
 
+          # Find the index of the last true label (where label equals 1)
           last_true_label_index = (label == 1).nonzero(as_tuple=False).max()
 
+          # Slice the pred and label tensors up to the last true label index
           pred_sliced = pred[:, :last_true_label_index + 1]
           label_sliced = label[:, :last_true_label_index + 1]
 
+          # Calculate accuracy for this batch
           correct_predictions += torch.sum(pred_sliced == label_sliced).item()
           total_predictions += pred_sliced.numel()
 
+          # Apply mask for <loc> tokens
           mask_mse = ((label_sliced >= 32500) & (label_sliced <= 33000)) & ((pred_sliced >= 32500) & (pred_sliced <= 33000))
 
           if torch.any(mask_mse):
@@ -127,14 +133,16 @@ class CurriculumTrainer(Trainer):
               mae_count += mask_mse.sum().item()
 
 
-          # Calculate IOU for <loc> tokens if there are any
+          # Calculate IOU for <loc> tokens
           for idx in range(mask_mse.size(1) - 3):
               if torch.all(mask_mse[0, idx:idx + 4]):  # Check for four consecutive True values
-                  label_box = [self.tokenizer.decode(token_id) for token_id in label_sliced[0, idx:idx + 4]]  # Extract 4 tokens for the bounding box
-                  pred_box = [self.tokenizer.decode(token_id) for token_id in pred_sliced[0, idx:idx + 4]]
+                  pred_box = [self.tokenizer.decode(token_id) for token_id in pred_sliced[0, idx:idx + 4]] # Extract 4 tokens for the bounding box
+                  label_box = [self.tokenizer.decode(token_id) for token_id in label_sliced[0, idx:idx + 4]]  
+                  
                   iou_sum += calculate_iou(pred_box, label_box)
                   iou_count += 1
 
+      # Calculate metrics
       accuracy = correct_predictions / total_predictions if total_predictions > 0 else 0
       mae = mae_sum / mae_count if mae_count > 0 else 0
       iou = iou_sum / iou_count if iou_count > 0 else 0
