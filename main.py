@@ -342,13 +342,13 @@ def main():
     if training_args.do_eval:
         logger.info("*** Evaluate ***")
 
-        metrics = trainer.compute_custom_metrics(model=model, dataset=test_dataset)
-
+        metrics = trainer.evaluate(eval_dataset=test_dataset)
+        
         max_val_samples = data_args.max_val_samples if data_args.max_val_samples is not None else len(test_dataset)
-        metrics["eval_samples"] = min(max_val_samples, len(test_dataset))
+        metrics["test_samples"] = min(max_val_samples, len(test_dataset))
 
-        trainer.log_metrics("eval", metrics)
-        trainer.save_metrics("eval", metrics)
+        trainer.log_metrics("test", metrics)
+        trainer.save_metrics("test", metrics)
 
     # Predict
     if training_args.do_predict:
