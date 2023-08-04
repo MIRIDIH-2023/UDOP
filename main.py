@@ -342,7 +342,7 @@ def main():
     if training_args.do_eval:
         logger.info("*** Evaluate ***")
 
-        metrics = trainer.evaluate(eval_dataset=test_dataset)
+        metrics = trainer.evaluate(eval_dataset=test_dataset, metric_key_prefix="test")
         
         max_val_samples = data_args.max_val_samples if data_args.max_val_samples is not None else len(test_dataset)
         metrics["test_samples"] = min(max_val_samples, len(test_dataset))
