@@ -19,7 +19,8 @@
     do_predict: true,
     dataloader_num_workers: 4,
     do_save_visualize: true,            # Save plt figures
-    prediction_loss_only: true,
+    prediction_loss_only: false,
+    label_names: ["labels"],
 
     # tokenize_unit config              # word, token
     unit: "word",

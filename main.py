@@ -295,11 +295,13 @@ def main():
         max_length=data_args.max_seq_length,
         max_length_decoder=data_args.max_seq_length_decoder,
     )
-    metric = evaluate.load("accuracy")
 
+    def preprocess_logits_for_metrics(logits, labels):
+        return logits[0].argmax(dim=-1)
+
+    metric = evaluate.load("accuracy")
     def compute_metrics(eval_pred):
-        logits, labels = eval_pred
-        predictions = np.argmax(logits, axis=-1)
+        predictions, labels = eval_pred
         return metric.compute(predictions=predictions, references=labels)
     
     elevateMRcallback = elevateMRCallback(
@@ -318,6 +320,7 @@ def main():
         tokenizer=tokenizer,
         data_collator=data_collator,
         compute_metrics=compute_metrics,
+        preprocess_logits_for_metrics=preprocess_logits_for_metrics,
         callbacks=[elevateMRcallback] if data_args.curriculum else None,
         loss_fct=model_args.loss_fct,
     )

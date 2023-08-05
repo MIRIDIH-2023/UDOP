@@ -58,7 +58,7 @@ class CurriculumTrainer(Trainer):
 
   def compute_loss(self, model, inputs, return_outputs=False):
       if self.loss_fct is None:
-        super().compute_loss(model, inputs, return_outputs)
+        return super().compute_loss(model, inputs, return_outputs)
       else:
         logits = model(**inputs).logits
         labels = inputs.get("labels").to(logits.device)
