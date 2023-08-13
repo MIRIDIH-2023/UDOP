@@ -55,7 +55,7 @@ class CurriculumTrainer(Trainer):
     self.state.log_history.append(output)
     self.control = self.callback_handler.on_log(self.args, self.state, self.control, logs)
 
-
+  # TODO: Add validation for task when not layout modeling
   def compute_loss(self, model, inputs, return_outputs=False):
       if self.loss_fct is None:
         return super().compute_loss(model, inputs, return_outputs)
@@ -63,8 +63,20 @@ class CurriculumTrainer(Trainer):
         logits = model(**inputs).logits
         labels = inputs.get("labels").to(logits.device)
 
-        ce_loss = 0
-        loc_loss = 0 # Location token loss
+        ce_loss = 0     # Cross Entropy loss
+        loc_loss = 0    # Location token loss
+
+        # Mask for elements if <loc_{idx}> in range [33000, 32500] inclusive
+        max_logits_indices = torch.argmax(logits, dim=2)
+        mask_loc = ((labels >= 32500) & (labels <= 33000)) & ((max_logits_indices >= 32500) & (max_logits_indices <= 33000))
+
+        last_true_label_index = (labels == 1).nonzero(as_tuple=False).max()
+
+        # Validation for when some tokens are not locations tokens 
+        for idx in range(1, last_true_label_index, 5):
+            if not torch.all(mask_loc[0, idx:idx+4]):
+               mask_loc[0, idx:idx+4] = False
+
 
         # Compute Cross Entropy (CE) loss for all elements in the logits and labels tensor.
         weight = torch.ones(logits.size(2))  # Initialize with weight 1 for all classes
@@ -75,14 +87,11 @@ class CurriculumTrainer(Trainer):
         ce_loss_fct = nn.CrossEntropyLoss(weight=weight, ignore_index=-100)
         ce_loss = ce_loss_fct(logits.view(-1, logits.size(-1)), labels.view(-1))
 
-        # Mask for elements if <loc_{idx}> in range [33000, 32500] inclusive
-        max_logits_indices = torch.argmax(logits, dim=2)
-        mask_mse = ((labels >= 32500) & (labels <= 33000)) & ((max_logits_indices >= 32500) & (max_logits_indices <= 33000))
 
         # If there are any location tokens in the batch, compute MSE loss
-        if torch.any(mask_mse):
-          input = max_logits_indices[mask_mse].float()
-          target = labels[mask_mse].float()
+        if torch.any(mask_loc):
+          input = max_logits_indices[mask_loc].float() / 500
+          target = labels[mask_loc].float() / 500
 
           if self.loss_fct == "huber":
             loc_loss = F.smooth_l1_loss(input, target)
