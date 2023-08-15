@@ -172,8 +172,8 @@ class ModelArguments:
         metadata={"help": "Attention type: BigBird configuruation only. Choices: block_sparse (default) or original_full"},
     )
     loss_fct: str = field(
-        default=None,
-        metadata={"help": "Loss function for location tokens. Default: None"},
+        default="CE",
+        metadata={"help": "Loss function for location tokens. Default: CE(Cross Entropy)"},
     )
 
 
@@ -442,7 +442,7 @@ if __name__ == "__main__":
             "gradient_accumulation_steps" : {'max': 8, 'min': 1},
             "num_train_epochs": {"value": 5},
             "curriculum": {"value": "false"},
-            "loss_fct": {"values": ["None", "mse", "huber", "custom_huber"]},
+            "loss_fct": {"values": ["CE", "MSE", "Huber", "Custom_huber"]},
         },
     }
 

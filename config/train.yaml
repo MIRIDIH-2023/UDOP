@@ -47,6 +47,6 @@
     curri_start_MR: 0.5,
 
     # loss config
-    loss_fct: "custom_huber",           # None, mse, huber, custom_huber
+    loss_fct: "CE",           # CE, Mse, Huber, Custom_huber
 
 }

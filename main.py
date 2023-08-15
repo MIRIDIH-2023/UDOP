@@ -179,7 +179,7 @@ class ModelArguments:
         metadata={"help": "Attention type: BigBird configuruation only. Choices: block_sparse (default) or original_full"},
     )
     loss_fct: str = field(
-        default=None,
+        default="CE",
         metadata={"help": "Loss function for location tokens. Default: None"},
     )
 

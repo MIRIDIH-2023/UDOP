@@ -57,7 +57,7 @@ class CurriculumTrainer(Trainer):
 
   # TODO: Add validation for task when not layout modeling
   def compute_loss(self, model, inputs, return_outputs=False):
-      if self.loss_fct is None:
+      if self.loss_fct == "CE":
         return super().compute_loss(model, inputs, return_outputs)
       else:
         logits = model(**inputs).logits
@@ -93,11 +93,11 @@ class CurriculumTrainer(Trainer):
           input = max_logits_indices[mask_loc].float() / 500
           target = labels[mask_loc].float() / 500
 
-          if self.loss_fct == "huber":
+          if self.loss_fct == "Huber":
             loc_loss = F.smooth_l1_loss(input, target)
-          elif self.loss_fct == "mse":
+          elif self.loss_fct == "MSE":
             loc_loss = F.mse_loss(input, target)
-          elif self.loss_fct == "custom_huber":
+          elif self.loss_fct == "Custom_huber":
             loc_loss = losses.custom_huber2(input, target, 2)
 
         loss = ce_loss + loc_loss
