@@ -6,6 +6,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
+from torchvision.ops import generalized_box_iou_loss
 from tqdm import tqdm
 from transformers import Trainer
 from transformers.deepspeed import deepspeed_init
@@ -17,8 +18,8 @@ from transformers.trainer_utils import (EvalLoopOutput, EvalPrediction,
                                         IntervalStrategy,
                                         denumpify_detensorize, has_length)
 
-from . import losses
 from ..common.utils import calculate_iou
+from . import losses
 
 logger = logging.getLogger(__name__)
 
@@ -88,10 +89,10 @@ class CurriculumTrainer(Trainer):
         ce_loss = ce_loss_fct(logits.view(-1, logits.size(-1)), labels.view(-1))
 
 
-        # If there are any location tokens in the batch, compute MSE loss
+        # If there are any location tokens in the batch, compute location loss
         if torch.any(mask_loc):
-          input = max_logits_indices[mask_loc].float() / 500
-          target = labels[mask_loc].float() / 500
+          input = (33000 - max_logits_indices[mask_loc]) / 500 # Generalize bounding boxes within range [0,1]
+          target = (33000 - labels[mask_loc]) / 500
 
           if self.loss_fct == "Huber":
             loc_loss = F.smooth_l1_loss(input, target)
@@ -99,6 +100,10 @@ class CurriculumTrainer(Trainer):
             loc_loss = F.mse_loss(input, target)
           elif self.loss_fct == "Custom_huber":
             loc_loss = losses.custom_huber2(input, target, 2)
+          elif self.loss_fct == "GIOU":
+            input = torch.reshape(input, (-1, 4))
+            target = torch.reshape(target, (-1, 4))
+            loc_loss = generalized_box_iou_loss(input, target, "mean")
 
         loss = ce_loss + loc_loss
 
