@@ -18,6 +18,8 @@ from transformers.trainer_utils import (EvalLoopOutput, EvalPrediction,
                                         IntervalStrategy,
                                         denumpify_detensorize, has_length)
 
+import wandb
+
 from ..common.utils import calculate_iou
 from . import losses
 
@@ -63,6 +65,7 @@ class CurriculumTrainer(Trainer):
       else:
         logits = model(**inputs).logits
         labels = inputs.get("labels").to(logits.device)
+        last_true_label_index = (labels == 1).nonzero(as_tuple=False).max()
 
         ce_loss = 0     # Cross Entropy loss
         loc_loss = 0    # Location token loss
@@ -71,22 +74,13 @@ class CurriculumTrainer(Trainer):
         max_logits_indices = torch.argmax(logits, dim=2)
         mask_loc = ((labels >= 32500) & (labels <= 33000)) & ((max_logits_indices >= 32500) & (max_logits_indices <= 33000))
 
-        last_true_label_index = (labels == 1).nonzero(as_tuple=False).max()
-
-        # Validation for when some tokens are not locations tokens 
+        # Validation for when some tokens are not locations tokens and when boxes are rotated
         for idx in range(1, last_true_label_index, 5):
-            if not torch.all(mask_loc[0, idx:idx+4]):
+            if (not torch.all(mask_loc[0, idx:idx+4]) or (max_logits_indices[0, idx] < max_logits_indices[0, idx + 2]) or (max_logits_indices[0, idx+1] < max_logits_indices[0, idx + 3])):
                mask_loc[0, idx:idx+4] = False
 
-
-        # Compute Cross Entropy (CE) loss for all elements in the logits and labels tensor.
-        weight = torch.ones(logits.size(2))  # Initialize with weight 1 for all classes
-        weight[32500:33001] = 0  # Set weight 0 for the specified range [33000, 32500]
-        weight = weight.to(logits.device)
-        
-
-        ce_loss_fct = nn.CrossEntropyLoss(weight=weight, ignore_index=-100)
-        ce_loss = ce_loss_fct(logits.view(-1, logits.size(-1)), labels.view(-1))
+        ce_loss_fct = nn.CrossEntropyLoss(ignore_index=-100)
+        ce_loss = ce_loss_fct(logits[~mask_loc].view(-1, logits.size(-1)), labels[~mask_loc].view(-1))
 
 
         # If there are any location tokens in the batch, compute location loss
