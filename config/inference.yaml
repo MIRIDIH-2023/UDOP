@@ -1,0 +1,27 @@
+{
+    # All, Layout Modeling, Visual Text Recognition, Joint Text-Layout Reconstruction
+    task_name: "Layout Modeling",                   
+
+    # Path config
+    model_name_or_path: "udop-unimodel-large-224",   # Path to model weight
+    output_dir: "./test",               # Path to save test images
+    data_dir: "./data",                 # Path to data directory
+
+    # Model config
+    max_seq_length: 512,
+    image_size: 224,
+    max_seq_length_decoder: 512,
+    model_type: "UdopUnimodel",
+
+    # Test config
+    do_train: false,
+    do_eval: false,
+    do_predict: true,
+    dataloader_num_workers: 4,
+    do_save_visualize: true,            # Save plt figures
+    prediction_loss_only: true,
+    label_names: ["labels"],
+
+    # tokenize_unit config              # word, token
+    unit: "word",
+}
