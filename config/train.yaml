@@ -29,8 +29,8 @@
     warmup_ratio: 0.001,
     weight_decay: 0.001,
     evaluation_strategy: "steps",
-    eval_steps: 100,
-    logging_steps: 100,
+    eval_steps: 500,
+    logging_steps: 500,
     prediction_loss_only: true,
     label_names: ["labels"],
     save_strategy: "steps",
@@ -48,6 +48,6 @@
     curri_start_MR: 0.5,
 
     # loss config
-    loss_fct: "GIOU",           # CE, MSE, Huber, Custom_huber, GIOU
+    loss_fct: "CE",           # CE, MSE, Huber, Custom_huber, GIOU
 
 }

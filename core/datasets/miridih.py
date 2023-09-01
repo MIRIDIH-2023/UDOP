@@ -41,11 +41,24 @@ class MIRIDIH_Dataset(Dataset):
 
         self.cls_collator = DataCollatorForSelfSupervisedTasks(tokenizer=tokenizer)
 
+        json_dir = os.path.join(data_args.data_dir, 'json_data')
+        img_dir = os.path.join(data_args.data_dir, 'images')
+
+        self.json_file = []
         self.images = []
 
-        for image_path in tqdm(os.listdir(data_args.data_dir)):
-            self.images.append(os.path.join(data_args.data_dir, image_path))
+
+        for json_file in tqdm(os.listdir(json_dir)):
+            idx = int(re.findall(r'\d+', json_file)[0])
+            json_path = os.path.join(json_dir, json_file)
+            image_path = os.path.join(img_dir, f"image_{idx}.png")
+
+            if (os.path.isfile(json_path)) and (os.path.isfile(image_path)):
+                self.json_file.append(json_path)
+                self.images.append(image_path)
         
+
+        assert len(self.json_file) == len(self.images), f"Number of json files and images are not equal!"
         logger.info(f'There are {len(self.images)} images with annotations')
     
     def __len__(self):
@@ -53,7 +66,16 @@ class MIRIDIH_Dataset(Dataset):
     
 
     def __getitem__(self, index):       
-        input_ids, labels, bbox_input, image = self.mask_selfSupervised(self.images[index] , self.tokenizer, self.max_seq_length, self.num_img_embeds, self.image_size)
+        file_ = self.json_file[index]
+
+        with open(file_, 'rb') as f:
+            try:
+                obj = pickle.load(f)
+                json_data = json.loads(json.dumps(obj, default=str))
+            except:
+                raise AssertionError(f"Wrong file: {file_}")
+            
+        input_ids, labels, bbox_input, image = self.mask_selfSupervised(json_data, self.images[index] , self.tokenizer, self.max_seq_length, self.num_img_embeds, self.image_size)
         visual_bbox_input = get_visual_bbox(self.image_size) 
         attention_mask = [1] * len(input_ids)
         decoder_attention_mask = [1] * len(labels)
@@ -96,7 +118,10 @@ class MIRIDIH_Dataset(Dataset):
     def get_layout_modeling_masking_ratio(self) :
         return self.layout_modeling_masking_ratio
 
-    def mask_selfSupervised(self, image_dir, tokenizer, max_seq_length=None, num_img_embeds=None, image_size=224):
+    def mask_selfSupervised(self, json_data, image_dir, tokenizer, max_seq_length=None, num_img_embeds=None, image_size=224):
+        image =  Image.open(image_dir).convert("RGB")
+        width, height = image.size
+
         task = None
         tokenize_unit = None
 
@@ -130,14 +155,11 @@ class MIRIDIH_Dataset(Dataset):
 
         assert (tokenize_unit == 'word' or tokenize_unit == 'token'), f"Wrong tokenize unit!"
 
-        images =  Image.open(image_dir).convert("RGB")
-        encoding = self.processor(images=images, text=task+'.', return_tensors="pt")
-
         
         total_IDs, total_bbox, total_labels = [], [], []
 
-        total_IDs.extend(tokenizer.encode(task+'.', add_special_tokens=False))
-        total_bbox += [[0,0,0,0]] * len(total_IDs)
+        # total_IDs.extend(tokenizer.encode(task+'.', add_special_tokens=False))
+        # total_bbox += [[0,0,0,0]] * len(total_IDs)
 
         sentinel_idx = 0
         
@@ -151,13 +173,13 @@ class MIRIDIH_Dataset(Dataset):
                     continue
 
                 bbox = [ 
-                    word['box'][0] / width,
-                    word['box'][1] / height,
-                    word['box'][2] / width,
-                    word['box'][3] / height
+                    int(1000 * (word['box'][0] / width)),
+                    int(1000 * (word['box'][1] / height)),
+                    int(1000 * (word['box'][2] / width)),
+                    int(1000 * (word['box'][3] / height)),
                 ]
 
-                valid_text = all(0 < x < 1 for x in bbox)
+                valid_text = all(0 < x < 1000 for x in bbox)
                 if not valid_text:
                     break
                 
@@ -198,6 +220,8 @@ class MIRIDIH_Dataset(Dataset):
             total_IDs.extend(input_ids)
             total_bbox.extend(bbox_list)
             total_labels.extend(labels)
+
+        encoding = self.processor(images=image, text=task+'.', return_tensors="pt")
                 
         total_IDs.append(tokenizer.eos_token_id)
         total_bbox += [[0,0,0,0]]
