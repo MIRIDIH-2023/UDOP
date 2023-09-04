@@ -3,6 +3,7 @@ udop-unimodel-large-224/
 wandb/
 .DS_Store
 models/
+.venv
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

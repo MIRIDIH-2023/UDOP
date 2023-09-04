@@ -69,11 +69,11 @@ class DataCollatorForT5LayoutModeling:
         labels = []
         
         for idx in range(len(label_numbering)):
-            labels += self.tokenizer.encode(f'<extra_l_id_{label_numbering[idx]}>', add_special_tokens=False)
-            labels += self.tokenizer.encode(f'<loc_{int(self.tokenizer._loc_extra_ids*group_bbox_list[idx][0])}>', add_special_tokens=False)
-            labels += self.tokenizer.encode(f'<loc_{int(self.tokenizer._loc_extra_ids*group_bbox_list[idx][1])}>', add_special_tokens=False)
-            labels += self.tokenizer.encode(f'<loc_{int(self.tokenizer._loc_extra_ids*group_bbox_list[idx][2])}>', add_special_tokens=False)
-            labels += self.tokenizer.encode(f'<loc_{int(self.tokenizer._loc_extra_ids*group_bbox_list[idx][3])}>', add_special_tokens=False)
+            labels += f'<extra_l_id_{label_numbering[idx]}>'
+            labels += f'<loc_{int(group_bbox_list[idx][0])}>'
+            labels += f'<loc_{int(group_bbox_list[idx][1])}>'
+            labels += f'<loc_{int(group_bbox_list[idx][2])}>'
+            labels += f'<loc_{int(group_bbox_list[idx][3])}>'
             
         slice_pointer=0
         L = len(group_list)

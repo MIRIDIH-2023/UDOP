@@ -173,13 +173,13 @@ class MIRIDIH_Dataset(Dataset):
                     continue
 
                 bbox = [ 
-                    int(1000 * (word['box'][0] / width)),
-                    int(1000 * (word['box'][1] / height)),
-                    int(1000 * (word['box'][2] / width)),
-                    int(1000 * (word['box'][3] / height)),
+                    int(500 * (word['box'][0] / width)),
+                    int(500 * (word['box'][1] / height)),
+                    int(500 * (word['box'][2] / width)),
+                    int(500 * (word['box'][3] / height)),
                 ]
 
-                valid_text = all(0 < x < 1000 for x in bbox)
+                valid_text = all(0 <= x <= 500 for x in bbox)
                 if not valid_text:
                     break
                 
@@ -211,7 +211,7 @@ class MIRIDIH_Dataset(Dataset):
             ids_list = []
             if tokenize_unit == 'word' :
                 for word_text in sentence_text:
-                    ids_list.append(tokenizer.convert_tokens_to_ids(word_text))
+                    ids_list.append(word_text)
             elif tokenize_unit == 'token' :
                 ids_list = tokenizer.convert_tokens_to_ids(sentence_text)
  
@@ -221,7 +221,7 @@ class MIRIDIH_Dataset(Dataset):
             total_bbox.extend(bbox_list)
             total_labels.extend(labels)
 
-        encoding = self.processor(images=image, text=task+'.', return_tensors="pt")
+        encoding = self.processor(images=image, text=task+'.', text_pair=total ,return_tensors="pt")
                 
         total_IDs.append(tokenizer.eos_token_id)
         total_bbox += [[0,0,0,0]]
