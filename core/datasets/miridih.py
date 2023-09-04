@@ -156,7 +156,7 @@ class MIRIDIH_Dataset(Dataset):
         assert (tokenize_unit == 'word' or tokenize_unit == 'token'), f"Wrong tokenize unit!"
 
         
-        total_IDs, total_bbox, total_labels = [], [], []
+        total_IDs, total_bbox, total_labels = "", [], ""
 
         # total_IDs.extend(tokenizer.encode(task+'.', add_special_tokens=False))
         # total_bbox += [[0,0,0,0]] * len(total_IDs)
@@ -189,7 +189,7 @@ class MIRIDIH_Dataset(Dataset):
                     word_bbox.append(bbox)
                 
                 if tokenize_unit == 'word' :
-                    sentence_text.append(word_text)
+                    sentence_text.append(word['text'])
                     sentence_bbox.append(bbox)
                 elif tokenize_unit == 'token' :
                     sentence_text.extend(word_text)
@@ -217,11 +217,11 @@ class MIRIDIH_Dataset(Dataset):
  
             input_ids, labels, bbox_list = self.cls_collator(task, ids_list, sentence_bbox, group_list, group_bbox_list, numbering_list)
 
-            total_IDs.extend(input_ids)
+            total_IDs += (input_ids)
             total_bbox.extend(bbox_list)
-            total_labels.extend(labels)
+            total_labels += (labels)
 
-        encoding = self.processor(images=image, text=task+'.', text_pair=total ,return_tensors="pt")
+        encoding = self.processor(images=image, text=task+'.', text_pair=total_IDs ,return_tensors="pt")
                 
         total_IDs.append(tokenizer.eos_token_id)
         total_bbox += [[0,0,0,0]]

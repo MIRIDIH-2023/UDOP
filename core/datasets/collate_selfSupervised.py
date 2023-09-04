@@ -64,9 +64,9 @@ class DataCollatorForT5LayoutModeling:
 
     def __call__(self, input_ids, bbox_list, group_list, group_bbox_list, label_numbering):
         
-        res_input_ids = []
+        res_input_ids = ""
         res_bbox_list = []
-        labels = []
+        labels = ""
         
         for idx in range(len(label_numbering)):
             labels += f'<extra_l_id_{label_numbering[idx]}>'
@@ -80,18 +80,18 @@ class DataCollatorForT5LayoutModeling:
         input_len = len(input_ids)
         mask_flag = False
         for i in range(input_len):
-            input_ids[i] = input_ids[i] if isinstance(input_ids[i], list) else [input_ids[i]]
+            #input_ids[i] = input_ids[i] if isinstance(input_ids[i], list) else [input_ids[i]]
             if slice_pointer < L and i == group_list[slice_pointer][0]:
                 mask_flag = True
-                res_input_ids += self.tokenizer.encode(f'<extra_l_id_{label_numbering[slice_pointer]}>', add_special_tokens=False)
+                res_input_ids += f'<extra_l_id_{label_numbering[slice_pointer]}> '
                 res_bbox_list.append([0,0,0,0])
-                res_input_ids.extend([ID for ID in input_ids[i]])
+                res_input_ids += input_ids[i] + " "
                 res_bbox_list.extend([[0,0,0,0]] * len(input_ids[i]))
             elif slice_pointer < L and i == group_list[slice_pointer][1]:
                 mask_flag = False
-                res_input_ids += self.tokenizer.encode(f'</extra_l_id_{label_numbering[slice_pointer]}>', add_special_tokens=False)
+                res_input_ids += f'</extra_l_id_{label_numbering[slice_pointer]}> '
                 res_bbox_list.append([0,0,0,0])
-                res_input_ids.extend([ID for ID in input_ids[i]])
+                res_input_ids += input_ids[i] + " "
                 res_bbox_list.extend([bbox_list[i]] * len(input_ids[i]))
                 slice_pointer += 1
             else:
@@ -99,10 +99,10 @@ class DataCollatorForT5LayoutModeling:
                     res_bbox_list.extend([[0,0,0,0]] * len(input_ids[i]))
                 else:
                     res_bbox_list.extend([bbox_list[i]] * len(input_ids[i]))
-                res_input_ids.extend([ID for ID in input_ids[i]])
+                res_input_ids += input_ids[i] + " "
                 
         if slice_pointer < L and input_len == group_list[slice_pointer][1] :
-            res_input_ids += self.tokenizer.encode(f'</extra_l_id_{label_numbering[slice_pointer]}>', add_special_tokens=False)
+            res_input_ids += f'</extra_l_id_{label_numbering[slice_pointer]}> '
             res_bbox_list.append([0,0,0,0])
         
         return res_input_ids, labels, res_bbox_list
