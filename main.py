@@ -21,11 +21,11 @@ from core.common.utils import (img_trans_torchvision, random_split,
                                visualize_layout_task,
                                visualize_text_layout_task, visualize_text_task)
 from core.datasets import MIRIDIH_Dataset
-from core.models import (UdopConfig, UdopTokenizer,
-                         UdopUnimodelForConditionalGeneration)
+# from core.models import (UdopConfig, UdopTokenizer,
+#                          UdopUnimodelForConditionalGeneration)
 from core.trainers import CurriculumTrainer, DataCollator, elevateMRCallback
 from core.transformers import (UdopForConditionalGeneration, UdopImageProcessor,
-                              UdopProcessor, UdopConfig)
+                              UdopProcessor, UdopConfig, UdopTokenizer)
 from transformers import (AutoConfig, AutoModelForTokenClassification,
                           AutoTokenizer, HfArgumentParser, Trainer,
                           TrainingArguments, set_seed)
@@ -34,9 +34,6 @@ from transformers.utils import check_min_version
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-MODEL_CLASSES = {
-    'UdopUnimodel': (UdopConfig, UdopUnimodelForConditionalGeneration, UdopTokenizer),
-}
 
 # Will error if the minimal version of Transformers is not installed. Remove at your own risks.
 check_min_version("4.6.0")
@@ -196,6 +193,7 @@ def main():
     else:
         model_args, data_args, training_args = parser.parse_args_into_dataclasses()
 
+    # If error, modify training_args.py "_frozen"
     training_args.logging_dir = os.path.join(training_args.output_dir, 'runs')
     if model_args.cache_dir is None:
         model_args.cache_dir = os.path.join(training_args.output_dir, 'cache')
