@@ -248,7 +248,7 @@ def main():
     # The .from_pretrained methods guarantee that only one local process can concurrently
     # download model & vocab.
 
-    image_processor = UdopImageProcessor()
+    image_processor = UdopImageProcessor(apply_ocr=False)
     tokenizer = UdopTokenizer.from_pretrained("ArthurZ/udop", legacy=True)
     model = UdopForConditionalGeneration.from_pretrained("nielsr/udop-large")
     processor = UdopProcessor(image_processor=image_processor, tokenizer=tokenizer)
@@ -290,7 +290,6 @@ def main():
         train_dataset=train_dataset if training_args.do_train else None,
         eval_dataset=eval_dataset if training_args.do_eval else None,
         tokenizer=tokenizer,
-        data_collator=data_collator,
         compute_metrics=compute_metrics,
         preprocess_logits_for_metrics=preprocess_logits_for_metrics,
         callbacks=[elevateMRcallback] if data_args.curriculum else None,

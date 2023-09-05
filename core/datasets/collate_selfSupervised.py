@@ -64,16 +64,16 @@ class DataCollatorForT5LayoutModeling:
 
     def __call__(self, input_ids, bbox_list, group_list, group_bbox_list, label_numbering):
         
-        res_input_ids = ""
+        res_input_ids = []
         res_bbox_list = []
-        labels = ""
+        labels = []
         
         for idx in range(len(label_numbering)):
-            labels += f'<extra_l_id_{label_numbering[idx]}>'
-            labels += f'<loc_{int(group_bbox_list[idx][0])}>'
-            labels += f'<loc_{int(group_bbox_list[idx][1])}>'
-            labels += f'<loc_{int(group_bbox_list[idx][2])}>'
-            labels += f'<loc_{int(group_bbox_list[idx][3])}>'
+            labels.append(f'<extra_l_id_{label_numbering[idx]}>')
+            labels.append(f'<loc_{int(group_bbox_list[idx][0])}>')
+            labels.append(f'<loc_{int(group_bbox_list[idx][1])}>')
+            labels.append(f'<loc_{int(group_bbox_list[idx][2])}>')
+            labels.append(f'<loc_{int(group_bbox_list[idx][3])}>')
             
         slice_pointer=0
         L = len(group_list)
@@ -83,26 +83,26 @@ class DataCollatorForT5LayoutModeling:
             #input_ids[i] = input_ids[i] if isinstance(input_ids[i], list) else [input_ids[i]]
             if slice_pointer < L and i == group_list[slice_pointer][0]:
                 mask_flag = True
-                res_input_ids += f'<extra_l_id_{label_numbering[slice_pointer]}> '
+                res_input_ids.append(f'<extra_l_id_{label_numbering[slice_pointer]}>')
                 res_bbox_list.append([0,0,0,0])
-                res_input_ids += input_ids[i] + " "
-                res_bbox_list.extend([[0,0,0,0]] * len(input_ids[i]))
+                res_input_ids.append(input_ids[i])
+                res_bbox_list.append([0,0,0,0])
             elif slice_pointer < L and i == group_list[slice_pointer][1]:
                 mask_flag = False
-                res_input_ids += f'</extra_l_id_{label_numbering[slice_pointer]}> '
+                res_input_ids.append(f'</extra_l_id_{label_numbering[slice_pointer]}>')
                 res_bbox_list.append([0,0,0,0])
-                res_input_ids += input_ids[i] + " "
-                res_bbox_list.extend([bbox_list[i]] * len(input_ids[i]))
+                res_input_ids.append(input_ids[i])
+                res_bbox_list.append(bbox_list[i])
                 slice_pointer += 1
             else:
                 if mask_flag:
-                    res_bbox_list.extend([[0,0,0,0]] * len(input_ids[i]))
+                    res_bbox_list.append([0,0,0,0])
                 else:
-                    res_bbox_list.extend([bbox_list[i]] * len(input_ids[i]))
-                res_input_ids += input_ids[i] + " "
+                    res_bbox_list.append(bbox_list[i])
+                res_input_ids.append(input_ids[i])
                 
         if slice_pointer < L and input_len == group_list[slice_pointer][1] :
-            res_input_ids += f'</extra_l_id_{label_numbering[slice_pointer]}> '
+            res_input_ids.append(f'</extra_l_id_{label_numbering[slice_pointer]}>')
             res_bbox_list.append([0,0,0,0])
         
         return res_input_ids, labels, res_bbox_list

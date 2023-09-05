@@ -75,42 +75,16 @@ class MIRIDIH_Dataset(Dataset):
             except:
                 raise AssertionError(f"Wrong file: {file_}")
             
-        input_ids, labels, bbox_input, image = self.mask_selfSupervised(json_data, self.images[index] , self.tokenizer, self.max_seq_length, self.num_img_embeds, self.image_size)
-        visual_bbox_input = get_visual_bbox(self.image_size) 
-        attention_mask = [1] * len(input_ids)
-        decoder_attention_mask = [1] * len(labels)
+        
+        encoding = self.mask_selfSupervised(json_data, self.images[index] , self.tokenizer, self.max_seq_length, self.num_img_embeds, self.image_size)
 
-        char_list = [0]
-        char_bbox_list = [[0,0,0,0]]
-        char_ids = torch.tensor(char_list, dtype=torch.long)
-        char_bbox_input = torch.tensor(char_bbox_list, dtype=torch.float)
+        encoding['input_ids'] = encoding['input_ids'][0]
+        encoding['bbox'] = encoding['bbox'][0]
+        encoding['labels'] = encoding['labels'][0]
+        encoding['pixel_values'] = encoding['pixel_values'][0]
+        encoding['attention_mask'] = encoding['attention_mask'][0]
 
-        bbox_input = torch.tensor(bbox_input, dtype=torch.float)
-        labels = torch.tensor(labels, dtype=torch.long)
-        input_ids = torch.tensor(input_ids, dtype=torch.long)
-        attention_mask = torch.tensor(attention_mask, dtype=torch.long)
-        decoder_attention_mask = torch.tensor(decoder_attention_mask, dtype=torch.long)
-
-        assert len(bbox_input) == len(input_ids), f"BBOX_INPUT != INPUT_IDS on file {self.json_file[index]}, index: {index}"
-        assert len(bbox_input.size()) == 2, f"BBOX_INPUT SIZE error on file {self.json_file[index]}, index: {index}"
-        assert len(char_bbox_input.size()) == 2, f"char_bbox_input size error on file {self.json_file[index]}, index: {index}"
-
-        return_dict =  {
-            "input_ids": input_ids,
-            "attention_mask": attention_mask,
-            "labels": labels,
-            "seg_data": bbox_input,
-            "visual_seg_data": visual_bbox_input,
-            "decoder_attention_mask": decoder_attention_mask,
-            "image": image,
-            'char_ids': char_ids,
-            'char_seg_data': char_bbox_input,
-            "file_name": self.json_file[index],
-            "thumbnail_url": json_data['thumbnail_url']
-        }
-        assert input_ids is not None
-
-        return return_dict
+        return encoding
     
     def set_layout_modeling_masking_ratio(self, new_ratio) :
         self.layout_modeling_masking_ratio = new_ratio
@@ -156,10 +130,8 @@ class MIRIDIH_Dataset(Dataset):
         assert (tokenize_unit == 'word' or tokenize_unit == 'token'), f"Wrong tokenize unit!"
 
         
-        total_IDs, total_bbox, total_labels = "", [], ""
+        total_IDs, total_bbox, total_labels = [], [], []
 
-        # total_IDs.extend(tokenizer.encode(task+'.', add_special_tokens=False))
-        # total_bbox += [[0,0,0,0]] * len(total_IDs)
 
         sentinel_idx = 0
         
@@ -217,17 +189,13 @@ class MIRIDIH_Dataset(Dataset):
  
             input_ids, labels, bbox_list = self.cls_collator(task, ids_list, sentence_bbox, group_list, group_bbox_list, numbering_list)
 
-            total_IDs += (input_ids)
+            total_IDs.extend(input_ids)
             total_bbox.extend(bbox_list)
-            total_labels += (labels)
+            total_labels.extend(labels)
 
-        encoding = self.processor(images=image, text=task+'.', text_pair=total_IDs ,return_tensors="pt")
-                
-        total_IDs.append(tokenizer.eos_token_id)
-        total_bbox += [[0,0,0,0]]
-        total_labels.append(tokenizer.eos_token_id)
+        encoding = self.processor(images=image, text=[task+'.'], text_pair=[total_IDs], boxes=[total_bbox], text_target=total_labels, return_tensors="pt")
 
-        return total_IDs, total_labels, total_bbox, image
+        return encoding
 
 
 # Argument : ori_bbox_list, mask_ratio
