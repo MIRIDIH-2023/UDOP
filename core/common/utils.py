@@ -1,10 +1,13 @@
+import base64
 import logging
 import math
 import os
 import re
 import warnings
-from typing import List, Sequence, Union, Tuple
+from io import BytesIO
+from typing import List, Sequence, Tuple, Union
 
+import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torchvision.transforms as T
@@ -13,8 +16,6 @@ from torch import default_generator, randperm
 from torch._utils import _accumulate
 from torch.utils.data.dataset import Subset
 from torchvision.transforms import functional as F
-import matplotlib.pyplot as plt
-
 
 logger = logging.getLogger(__name__)
 PREFIX_CHECKPOINT_DIR = 'checkpoint'
@@ -494,3 +495,19 @@ def visualize_layout_task(sample, label_text, prediction_texts, input_text, data
         f.write(label_text)
         f.close()
         fig.savefig(os.path.join(output_dir, f'{index}_xml{xml}.png'))
+
+# API utils
+
+def str_to_img(str):
+    str = base64.b64decode(str)    
+    img =  BytesIO(str)
+    img = Image.open(img)
+
+    return img
+
+def img_to_str(img):
+    img_buffer = BytesIO()
+    img.save(img_buffer, format="PNG")
+    img_str = base64.b64encode(img_buffer.getvalue()).decode('utf8')
+
+    return img_str

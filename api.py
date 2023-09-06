@@ -7,7 +7,8 @@ from flask_cors import CORS
 from PIL import Image
 from transformers import HfArgumentParser
 
-from core.common.utils import get_visual_bbox, img_trans_torchvision
+from core.common.utils import (get_visual_bbox, img_trans_torchvision,
+                               str_to_img)
 from core.models import (UdopConfig, UdopTokenizer,
                          UdopUnimodelForConditionalGeneration)
 
@@ -133,7 +134,7 @@ def main():
         input_ids = task_ids + word_ids
         seg_data = task_boxes + token_boxes
         attention_mask = [1] * len(input_ids)
-        image = Image.new('RGB', (224, 224), 'rgb(0, 0, 0)') 
+        image = str_to_img(data['image']) if 'image' in data else Image.new('RGB', (224, 224), 'rgb(0, 0, 0)')
         image = img_trans_torchvision(image, 224)
         visual_seg_data = get_visual_bbox() 
 
@@ -157,8 +158,11 @@ def main():
                             )
 
         prediction_text = tokenizer.decode(output_ids[0][1:-1])
-        print(prediction_text)
 
+        data = {}
+        data['prediction'] = prediction_text
+        response = jsonify(data)
+        return response
 
 
 if __name__ == '__main__':    
