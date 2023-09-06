@@ -434,8 +434,8 @@ if __name__ == "__main__":
     sweep_config = {
         "method": "bayes",
         "metric": {
-            "name": "eval/loss", 
-            "goal": "minimize"
+            "name": "test/iou", 
+            "goal": "maximize"
         },
         "parameters": {
             "learning_rate": {"distribution": "uniform", "min": 1e-6, "max": 1e-4},

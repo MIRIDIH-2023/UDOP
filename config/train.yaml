@@ -23,6 +23,7 @@
     dataloader_num_workers: 4,
     gradient_accumulation_steps: 4,
     per_device_train_batch_size : 1,
+    per_device_eval_batch_size : 1,
     overwrite_output_dir: true,
     learning_rate: 5.0e-5,
     warmup_ratio: 0.001,
@@ -47,6 +48,6 @@
     curri_start_MR: 0.5,
 
     # loss config
-    loss_fct: "GIOU",           # CE, MSE, Huber, Custom_huber, GIOU
+    loss_fct: "CE",           # CE, MSE, Huber, Custom_huber, GIOU
 
 }
