@@ -22,18 +22,13 @@ from shutil import copyfile
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import sentencepiece as spm
+import torch
 
 from ...tokenization_utils import PreTrainedTokenizer
-from ...tokenization_utils_base import (
-    BatchEncoding,
-    EncodedInput,
-    PreTokenizedInput,
-    TextInput,
-    TextInputPair,
-    TruncationStrategy,
-)
+from ...tokenization_utils_base import (BatchEncoding, EncodedInput,
+                                        PreTokenizedInput, TextInput,
+                                        TextInputPair, TruncationStrategy)
 from ...utils import PaddingStrategy, TensorType, add_end_docstrings, logging
-
 
 logger = logging.get_logger(__name__)
 
@@ -634,6 +629,8 @@ class UdopTokenizer(PreTrainedTokenizer):
             return target_encodings
         else:
             encodings["labels"] = target_encodings["input_ids"][:,0].unsqueeze(0)
+            encodings["labels"] = torch.cat((encodings["labels"], torch.tensor([self.eos_token_id]).unsqueeze(0)), dim=1)
+
             return encodings
 
     def call_boxes(
