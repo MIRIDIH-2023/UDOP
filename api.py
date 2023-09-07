@@ -1,6 +1,8 @@
 from dataclasses import dataclass, field
+from io import BytesIO
 from typing import Optional
 
+import requests
 import torch
 from flask import Flask, Response, jsonify, request
 from flask_cors import CORS
@@ -134,7 +136,12 @@ def main():
         input_ids = task_ids + word_ids
         seg_data = task_boxes + token_boxes
         attention_mask = [1] * len(input_ids)
-        image = str_to_img(data['image']) if 'image' in data else Image.new('RGB', (224, 224), 'rgb(0, 0, 0)')
+        if 'image' in data:
+            image = str_to_img(data['image'])
+        elif 'url' in data:
+            image = Image.open(BytesIO(requests.get(data['url']).content))
+        else:
+            Image.new('RGB', (224, 224), 'rgb(0, 0, 0)')
         image = img_trans_torchvision(image, 224)
         visual_seg_data = get_visual_bbox() 
 
