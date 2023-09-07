@@ -100,7 +100,7 @@ def main():
         response.headers.add("Access-Control-Allow-Origin", "*")
         data = request.get_json()
 
-        # text: List[str]]
+        # text: List[str]
         # Assumes text is given as a list of sentences
         # ex) text = ['Sentence 1', 'Sentence 2']
         text = data['text']
@@ -166,4 +166,4 @@ def main():
 
 
 if __name__ == '__main__':    
-    app.run(host="0.0.0.0", port=8000)
+    app.run(host="0.0.0.0", port=5000)

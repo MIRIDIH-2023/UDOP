@@ -6,7 +6,7 @@ import requests
 from PIL import Image
 
 # Set the base URL for the Flask server
-base_url = 'http://localhost:8000'
+base_url = 'http://ec2-52-79-236-209.ap-northeast-2.compute.amazonaws.com:5000/'
 
 
 def img_to_str(img):
