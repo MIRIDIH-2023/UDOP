@@ -84,7 +84,7 @@ model = UdopUnimodelForConditionalGeneration.from_pretrained(
     cache_dir=args.cache_dir,
     revision=args.model_revision,
     use_auth_token=True if args.use_auth_token else None,
-)
+).to(device)
 
 
 # Test route
