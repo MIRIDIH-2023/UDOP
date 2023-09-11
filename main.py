@@ -16,24 +16,28 @@ import torch
 from PIL import Image
 from sentence_transformers import SentenceTransformer
 
-import transformers
 from core.common.utils import (img_trans_torchvision, random_split,
                                visualize_layout_task,
                                visualize_text_layout_task, visualize_text_task)
 from core.datasets import MIRIDIH_Dataset
 # from core.models import (UdopConfig, UdopTokenizer,
 #                          UdopUnimodelForConditionalGeneration)
+import core.transformers
 from core.trainers import CurriculumTrainer, DataCollator, elevateMRCallback
 from core.transformers import (UdopForConditionalGeneration, UdopImageProcessor,
-                              UdopProcessor, UdopConfig, UdopTokenizer)
-from transformers import (AutoConfig, AutoModelForTokenClassification,
+                              UdopProcessor, UdopConfig, UdopTokenizer, AutoConfig, AutoModelForTokenClassification,
                           AutoTokenizer, HfArgumentParser, Trainer,
                           TrainingArguments, set_seed)
-from transformers.trainer_utils import get_last_checkpoint, is_main_process
-from transformers.utils import check_min_version
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+from core.transformers.trainer_utils import get_last_checkpoint, is_main_process
+from core.transformers.utils import check_min_version
 
+if torch.cuda.is_available():
+    device = torch.device("cuda")
+elif torch.torch.backends.mps.is_available():
+    device = torch.device("mps")
+else:
+    device = torch.device("cpu")
 
 # Will error if the minimal version of Transformers is not installed. Remove at your own risks.
 check_min_version("4.6.0")
@@ -230,9 +234,9 @@ def main():
     )
     # Set the verbosity to info of the Transformers logger (on main process only):
     if is_main_process(training_args.local_rank):
-        transformers.utils.logging.set_verbosity_info()
-        transformers.utils.logging.enable_default_handler()
-        transformers.utils.logging.enable_explicit_format()
+        core.transformers.utils.logging.set_verbosity_info()
+        core.transformers.utils.logging.enable_default_handler()
+        core.transformers.utils.logging.enable_explicit_format()
     
     logger.info(f"Training/evaluation parameters {training_args}")
     logger.info(f"Data arguments: {data_args}")
