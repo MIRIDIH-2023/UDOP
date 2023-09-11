@@ -426,7 +426,7 @@ def visualize_text_task(sample, label_text, prediction_text, input_text, data_ar
         fig.savefig(os.path.join(output_dir, f'{index}_xml{xml}.png'))
 
 def visualize_layout_task(sample, label_text, prediction_texts, input_text, data_args, output_dir, images, index):
-    idx_ = int(re.findall(r'\d+', sample['file_name'][0])[0])
+    idx_ = int(re.findall(r'\d+', sample._file_name)[-1])
     image_path = os.path.join(data_args.data_dir , 'images', f'image_{idx_}.png')
     original_image = Image.open(image_path)
     images.insert(0, original_image)       # images = [original_image, recommeded_image1, 2 ...]
@@ -452,45 +452,44 @@ def visualize_layout_task(sample, label_text, prediction_texts, input_text, data
         canvas_image = add_bbox_to_image(blank_canvas, prediction_tokens, (0, 1, 0, 0.5))
 
         # Plot the masked image using label layout
-        axs[i][0].imshow(masked_image.permute(1, 2, 0))
+        axs[0].imshow(masked_image.permute(1, 2, 0))
         for idx, (input_token, label_token) in enumerate(zip(input_tokens, label_tokens)):
             x1, y1, x2, y2 = label_token['bbox']
             x1 = round(x1 * (masked_image.shape[2] - 1) / 500)
             x2 = round(x2 * (masked_image.shape[2] - 1) / 500)
             y1 = round(y1 * (masked_image.shape[1] - 1) / 500)
             y2 = round(y2 * (masked_image.shape[1] - 1) / 500)
-            axs[i][0].text(x1, y1, idx, fontsize=8, bbox=dict(alpha=0.2))
-        axs[i][0].set_title(f'{titles[i]} Masked (Label Layout)')
+            axs[0].text(x1, y1, idx, fontsize=8, bbox=dict(alpha=0.2))
+        axs[0].set_title(f'{titles[i]} Masked (Label Layout)')
 
         # Plot the prediction masked image
-        axs[i][1].imshow(predicted_image.permute(1, 2, 0))
+        axs[1].imshow(predicted_image.permute(1, 2, 0))
         for idx, (input_token, prediction_token) in enumerate(zip(input_tokens, prediction_tokens)):
-            x1, y1, x2, y2 = label_token['bbox']
+            x1, y1, x2, y2 = prediction_token['bbox']
             x1 = round(x1 * (predicted_image.shape[2] - 1) / 500)
             x2 = round(x2 * (predicted_image.shape[2] - 1) / 500)
             y1 = round(y1 * (predicted_image.shape[1] - 1) / 500)
             y2 = round(y2 * (predicted_image.shape[1] - 1) / 500)
-            axs[i][1].text(x1, y1, idx, fontsize=8, bbox=dict(alpha=0.2))
-        axs[i][1].set_title(f'{titles[i]} Prediction Layout')
+            axs[1].text(x1, y1, idx, fontsize=8, bbox=dict(alpha=0.2))
+        axs[1].set_title(f'{titles[i]} Prediction Layout')
 
         # Plot the prediction masked image
-        axs[i][2].imshow(canvas_image.permute(1, 2, 0))
+        axs[2].imshow(canvas_image.permute(1, 2, 0))
         for idx, (input_token, prediction_token) in enumerate(zip(input_tokens, prediction_tokens)):
             x1, y1, x2, y2 = prediction_token['bbox']
             x1 = round(x1 * (canvas_image.shape[2] - 1) / 500)
             x2 = round(x2 * (canvas_image.shape[2] - 1) / 500)
             y1 = round(y1 * (canvas_image.shape[1] - 1) / 500)
             y2 = round(y2 * (canvas_image.shape[1] - 1) / 500)
-            axs[i][2].text(x1, y1, idx, fontsize=8, bbox=dict(alpha=0.2))
-        axs[i][2].set_title(f'{titles[i]} Prediction Layout')
+            axs[2].text(x1, y1, idx, fontsize=8, bbox=dict(alpha=0.2))
+        axs[2].set_title(f'{titles[i]} Prediction Layout')
 
     label_text = '\n'.join([f"{token['id']}: {token['text']}" for token in input_tokens])
 
     plt.tight_layout()
     plt.show()
     if data_args.do_save_visualize:
-        xml = int(re.findall(r'\d+', sample['file_name'][0])[0])
-        f = open(os.path.join(output_dir, f'{index}_xml{xml}_text.txt'), 'w')
+        f = open(os.path.join(output_dir, f'{index}_xml{idx_}_text.txt'), 'w')
         f.write(label_text)
         f.close()
-        fig.savefig(os.path.join(output_dir, f'{index}_xml{xml}.png'))
+        fig.savefig(os.path.join(output_dir, f'{index}_xml{idx_}.png'))

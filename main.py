@@ -33,6 +33,7 @@ from transformers.trainer_utils import get_last_checkpoint, is_main_process
 from transformers.utils import check_min_version
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = "mps" if torch.has_mps else "cpu"
 
 
 # Will error if the minimal version of Transformers is not installed. Remove at your own risks.
@@ -250,7 +251,8 @@ def main():
 
     image_processor = UdopImageProcessor(apply_ocr=False)
     tokenizer = UdopTokenizer.from_pretrained("ArthurZ/udop", legacy=True)
-    model = UdopForConditionalGeneration.from_pretrained("nielsr/udop-large")
+    config = UdopConfig.from_pretrained("nielsr/udop-large")
+    model = UdopForConditionalGeneration.from_pretrained(model_args.model_name_or_path,config=config).to(device)
     processor = UdopProcessor(image_processor=image_processor, tokenizer=tokenizer)
 
 
@@ -323,6 +325,46 @@ def main():
 
         trainer.log_metrics("test", metrics)
         trainer.save_metrics("test", metrics)
+
+    # Predict
+    if training_args.do_predict:
+        logger.info("*** Predict ***")
+        os.makedirs(training_args.output_dir, exist_ok=True)
+        
+        test_dataset.dataset.set_layout_modeling_masking_ratio(1.0)
+
+        while True:
+            idx = input(f"Enter idx (or 'quit') in range 0 ~ {len(test_dataset)-1}: ")
+            if idx.lower() == "quit":
+                break
+                
+            encoding = test_dataset.__getitem__(int(idx))
+
+            # Process and batch inputs
+            encoding['input_ids'] = torch.tensor(encoding['input_ids'], dtype=torch.long).unsqueeze(0).to(device)
+            encoding['bbox'] = torch.tensor(encoding['bbox'], dtype=torch.float).unsqueeze(0).to(device)
+            encoding['attention_mask'] = torch.tensor(encoding['attention_mask'], dtype=torch.long).unsqueeze(0).to(device)
+            encoding['pixel_values'] = encoding['pixel_values'].unsqueeze(0).to(device)
+            encoding['labels'] = torch.tensor(encoding['labels'], dtype=torch.long).unsqueeze(0).to(device)
+
+            predicted_ids = model.generate(
+                **encoding,
+                num_beams=1,
+                max_length=512
+            )
+
+            input_text = tokenizer.decode(encoding['input_ids'][0]) 
+            prediction_text = processor.decode(predicted_ids[0][1:-1])
+            label_text = processor.batch_decode(encoding['labels'])[0]
+            images = []
+
+            visualize_layout_task(encoding, label_text, [prediction_text], input_text, data_args, training_args.output_dir, images, idx)
+
+            print("Input: ", input_text)
+            print("\nLabel: ", label_text)
+            print("\nPrediction: ", prediction_text)
+            print()
+            
 
 
 if __name__ == "__main__":

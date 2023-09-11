@@ -83,6 +83,8 @@ class MIRIDIH_Dataset(Dataset):
         encoding['labels'] = encoding['labels'][0]
         encoding['pixel_values'] = encoding['pixel_values'][0]
         encoding['attention_mask'] = encoding['attention_mask'][0]
+        encoding._file_name = self.json_file[index]
+        encoding._thumbnail_url = json_data['thumbnail_url']
 
         return encoding
     
