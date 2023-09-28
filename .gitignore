@@ -10,6 +10,7 @@ models/
 test/
 ke-t5/
 SBERT/sbert_keyword_extractor_2023_07_18/
+SBERT/embedded/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

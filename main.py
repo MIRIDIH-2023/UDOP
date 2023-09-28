@@ -363,7 +363,7 @@ def main():
         model_path='./SBERT/sbert_keyword_extractor_2023_07_18' #모델 저장 경로
         sbert_model = SentenceTransformer(model_path)
         sbert_model = SBERT(sbert_model)
-        sbert_model.load_emedding_vector(save_path="./SBERT/embedded",file_name="keyword_embedding_list.pickle") #load vector for get_keyword
+        sbert_model.load_emedding_vector(save_path="./SBERT/embedded",file_name="data_list.pickle") #load vector for get_keyword
 
         while True:
             idx = input(f"Enter idx (or 'quit') in range 0 ~ {len(test_dataset)-1}: ")
@@ -381,7 +381,7 @@ def main():
             save_im_to_generate = [im]
             images = []                     # used for saving recommended, and blank image
 
-            if use_text_image_only:=True:   # Text only, image added
+            if use_text_image_only:=False:   # Text only, image added
                 K = 2
                 K = int(input("Enter the number of images to be recommended in range 1 ~ 5: "))
                 while (K < 1 or K > 5) :
