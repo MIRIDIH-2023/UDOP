@@ -4,6 +4,8 @@ wandb/
 .DS_Store
 test/
 .venv
+models/
+ke-t5/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

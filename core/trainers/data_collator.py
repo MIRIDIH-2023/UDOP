@@ -61,7 +61,7 @@ class DataCollator:
         if features[0] is None:
             return {'placeholder': torch.zeros(size=(2, 2), dtype=torch.long)}
         batch_size = len(features)
-        special_labels = ['text_image_match_labels', 'image', 'class', 'image_mask_label', 'ids_restore', 'ids_keep']
+        special_labels = ['pixel_values']
         max_len = self.max_length
         max_len_decoder = self.max_length_decoder
         max_len_char = self.max_length_char
@@ -77,7 +77,7 @@ class DataCollator:
         batch = {}
         for key in features[0].keys():
             pad_value = 0
-            if key in ["seg_data", "decoder_seg_data", "char_seg_data"]:
+            if key in ["bbox"]:
                 pad_value = [0] * 4
             elif key in ['labels', 'image_mask_labels']:
                 pad_value = -100
@@ -100,14 +100,10 @@ class DataCollator:
                     f[key] = f[key][:target_len]
                 batched_feature = torch.stack([pad_sequence_native(f[key], target_len, pad_value) for f in features], dim=0)
             batch[key] = batched_feature
-
-        if "position_ids" not in batch:
-            position_ids = torch.stack([torch.arange(target_len, dtype=torch.long) for _ in range(batch_size)])
-            batch["position_ids"] = position_ids
         
-        if 'image' in features[0]:
-            image_list = torch.stack([d['image'] for d in features])
-            batch.update({'image': image_list})
+        if 'pixel_values' in features[0]:
+            image_list = torch.stack([d['pixel_values'] for d in features])
+            batch.update({'pixel_values': image_list})
             
             for k in ['image_mask_label']:
                 if k in features[0] and features[0][k] is not None:

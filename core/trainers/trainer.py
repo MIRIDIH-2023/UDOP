@@ -12,7 +12,7 @@ import transformers
 from transformers import logging
 from transformers.trainer_utils import PREFIX_CHECKPOINT_DIR, seed_worker
 
-from pytorch_lightning.trainer.supporters import CombinedLoader
+from pytorch_lightning.utilities import CombinedLoader
 
 from PIL import Image
 

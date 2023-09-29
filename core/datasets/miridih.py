@@ -136,6 +136,7 @@ class MIRIDIH_Dataset(Dataset):
 
 
         sentinel_idx = 0
+        token_idx = 0
         
         for text in json_data['form']:
             valid_text = True
@@ -157,11 +158,6 @@ class MIRIDIH_Dataset(Dataset):
                 if not valid_text:
                     break
                 
-                sub_tokens = tokenizer.tokenize(word['text']) 
-                for sub_token in sub_tokens:
-                    word_text.append(sub_token)
-                    word_bbox.append(bbox)
-                
                 if tokenize_unit == 'word' :
                     sentence_text.append(word['text'])
                     sentence_bbox.append(bbox)
@@ -182,6 +178,11 @@ class MIRIDIH_Dataset(Dataset):
             if sentinel_idx > 100:      # Mask until sentinel token 99
                 break
             
+            for _word in sentence_text:
+                token_idx += len(tokenizer.tokenize(_word))
+            if token_idx > 510:
+                break
+            
             ids_list = []
             if tokenize_unit == 'word' :
                 for word_text in sentence_text:
@@ -195,7 +196,12 @@ class MIRIDIH_Dataset(Dataset):
             total_bbox.extend(bbox_list)
             total_labels.extend(labels)
 
-        encoding = self.processor(images=image, text=[task+'.'], text_pair=[total_IDs], boxes=[total_bbox], text_target=total_labels, return_tensors="pt")
+        encoding = self.processor(images=image, text=[task+'.'], text_pair=[total_IDs], boxes=[total_bbox], return_tensors="pt")
+        encoding['labels'] = self.processor(images=image, text_target=total_labels, return_tensors="pt")['input_ids']
+
+        encoding["labels"] = encoding["labels"][:,0].unsqueeze(0)
+        encoding["labels"] = torch.cat((encoding["labels"], torch.tensor([tokenizer.eos_token_id]).unsqueeze(0)), dim=1)
+
 
         return encoding
 

@@ -3,7 +3,7 @@
     task_name: "Layout Modeling", 
 
     # Path config
-    model_name_or_path: "udop-unimodel-large-224",  # Path to model weight
+    model_name_or_path: "nielsr/udop-large",  # Path to model weight
     output_dir: "./models",                         # Path to save trained model
     data_dir: "./data",                             # Path to data directory
 

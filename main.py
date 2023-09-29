@@ -3,39 +3,26 @@
 
 import logging
 import os
-import re
 import sys
 from dataclasses import dataclass, field
-from io import BytesIO
 from typing import Optional
 
 import evaluate
-import numpy as np
-import requests
 import torch
-from PIL import Image
-from sentence_transformers import SentenceTransformer
+import transformers
+from transformers import HfArgumentParser, TrainingArguments, set_seed
+from transformers.models.udop import (UdopConfig, UdopForConditionalGeneration,
+                                      UdopImageProcessor, UdopProcessor,
+                                      UdopTokenizer)
+from transformers.trainer_utils import get_last_checkpoint, is_main_process
+from transformers.utils import check_min_version
 
-from core.common.utils import (img_trans_torchvision, random_split,
-                               visualize_layout_task,
-                               visualize_text_layout_task, visualize_text_task)
+from core.common.utils import random_split, visualize_layout_task
 from core.datasets import MIRIDIH_Dataset
-# from core.models import (UdopConfig, UdopTokenizer,
-#                          UdopUnimodelForConditionalGeneration)
-import core.transformers
 from core.trainers import CurriculumTrainer, DataCollator, elevateMRCallback
-from core.transformers import (UdopForConditionalGeneration, UdopImageProcessor,
-                              UdopProcessor, UdopConfig, UdopTokenizer, AutoConfig, AutoModelForTokenClassification,
-                          AutoTokenizer, HfArgumentParser, Trainer,
-                          TrainingArguments, set_seed)
-
-from core.transformers.trainer_utils import get_last_checkpoint, is_main_process
-from core.transformers.utils import check_min_version
 
 if torch.cuda.is_available():
     device = torch.device("cuda")
-elif torch.torch.backends.mps.is_available():
-    device = torch.device("mps")
 else:
     device = torch.device("cpu")
 
@@ -234,9 +221,9 @@ def main():
     )
     # Set the verbosity to info of the Transformers logger (on main process only):
     if is_main_process(training_args.local_rank):
-        core.transformers.utils.logging.set_verbosity_info()
-        core.transformers.utils.logging.enable_default_handler()
-        core.transformers.utils.logging.enable_explicit_format()
+        transformers.utils.logging.set_verbosity_info()
+        transformers.utils.logging.enable_default_handler()
+        transformers.utils.logging.enable_explicit_format()
     
     logger.info(f"Training/evaluation parameters {training_args}")
     logger.info(f"Data arguments: {data_args}")
@@ -253,7 +240,7 @@ def main():
     # download model & vocab.
 
     image_processor = UdopImageProcessor(apply_ocr=False)
-    tokenizer = UdopTokenizer.from_pretrained("ArthurZ/udop", legacy=True)
+    tokenizer = UdopTokenizer.from_pretrained("ArthurZ/udop")
     config = UdopConfig.from_pretrained("nielsr/udop-large")
     model = UdopForConditionalGeneration.from_pretrained(model_args.model_name_or_path,config=config).to(device)
     processor = UdopProcessor(image_processor=image_processor, tokenizer=tokenizer)
@@ -298,6 +285,7 @@ def main():
         compute_metrics=compute_metrics,
         preprocess_logits_for_metrics=preprocess_logits_for_metrics,
         callbacks=[elevateMRcallback] if data_args.curriculum else None,
+        data_collator=data_collator,
         loss_fct=model_args.loss_fct,
     )
 
