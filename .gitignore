@@ -6,6 +6,7 @@ test/
 .venv
 models/
 ke-t5/
+udop-unimodel-large-512-300k-steps
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
