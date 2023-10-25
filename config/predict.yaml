@@ -16,7 +16,7 @@
     # Test config
     do_train: false,
     do_eval: false,
-    do_predict: false,
+    do_predict: true,
     dataloader_num_workers: 4,
     do_save_visualize: true,            # Save plt figures
     prediction_loss_only: true,

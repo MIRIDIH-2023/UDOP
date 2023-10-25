@@ -22,7 +22,7 @@ from transformers.models.udop import (
 from transformers.trainer_utils import get_last_checkpoint, is_main_process
 from transformers.utils import check_min_version
 
-from core.common.utils import random_split, visualize_layout_task
+from core.common.utils import inference_layout_task, random_split, visualize_layout_task
 from core.datasets import MIRIDIH_Dataset
 from core.trainers import CurriculumTrainer, DataCollator, elevateMRCallback
 
@@ -154,6 +154,10 @@ class DataTrainingArguments:
     do_save_visualize: bool = field(
         default=False,
         metadata={"help": "Whether to save visualizations in predict"},
+    )
+    do_inference: bool = field(
+        default=False,
+        metadata={"help": "Whether to inference model"},
     )
 
 
@@ -445,6 +449,68 @@ def main():
             print("\nLabel: ", label_text)
             print("\nPrediction: ", prediction_text)
             print()
+
+    # Inference
+    if data_args.do_inference:
+        logger.info("*** Inference ***")
+
+        os.makedirs(training_args.output_dir, exist_ok=True)
+
+        text = [
+            "2023 DesignCat Annual Report",
+            "Sales department report",
+            "Sangyun",
+            "sangyun0914@gmail.com",
+        ]
+        image = Image.new("RGB", (224, 224), "rgb(0, 0, 0)")
+
+        # Prepare model inputs
+        sentinel_idx = 0
+        masked_text = []
+        token_boxes = []
+
+        # Mask sentences
+        for sentence in text:
+            masked_text.append(f"<extra_l_id_{sentinel_idx}>")
+            masked_text.append(sentence)
+            masked_text.append(f"</extra_l_id_{sentinel_idx}>")
+
+            if sentinel_idx > 100:
+                break
+            sentinel_idx += 1
+
+        token_boxes = [[0, 0, 0, 0] for _ in range(len(masked_text))]
+
+        # Encode inputs
+        encoding = processor(
+            images=image,
+            text=["Layout Modeling."],
+            text_pair=[masked_text],
+            boxes=[token_boxes],
+            return_tensors="pt",
+        )
+        encoding = {key: value.to(device) for key, value in encoding.items()}
+
+        # Generate layout predictions
+        predicted_ids = model.generate(**encoding, num_beams=1, max_length=512)
+
+        input_text = tokenizer.decode(encoding["input_ids"][0])
+        prediction_text = processor.decode(predicted_ids[0][1:-1])
+        images = [image]
+
+        inference_layout_task(
+            encoding,
+            [prediction_text],
+            input_text,
+            data_args,
+            training_args.output_dir,
+            images,
+            "0",
+        )
+
+        print("Input: ", input_text)
+        print("\nPrediction: ", prediction_text)
+        print()
 
 
 if __name__ == "__main__":

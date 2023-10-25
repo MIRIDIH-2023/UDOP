@@ -493,3 +493,42 @@ def visualize_layout_task(sample, label_text, prediction_texts, input_text, data
         f.write(label_text)
         f.close()
         fig.savefig(os.path.join(output_dir, f'{index}_xml{idx_}.png'))
+
+def inference_layout_task(sample, prediction_texts, input_text, data_args, output_dir, images, index):
+    original_image = images[0]
+    assert len(prediction_texts) == len(images), "Prediction_texts and images do not match!"
+
+    input_tokens = parse_input(input_text)
+
+    scale_factor = len(images)
+    fig, axs = plt.subplots(1, 1, figsize=(15, 5))
+
+
+    for i, (text, image) in enumerate(zip(prediction_texts, images)):
+        image = T.ToTensor()(image)
+        prediction_tokens = parse_token(text)
+
+        blank_canvas = torch.ones(image.shape, dtype=torch.float)
+        predicted_image = add_bbox_to_image(image, prediction_tokens, (0, 1, 0, 0.5))
+        canvas_image = add_bbox_to_image(blank_canvas, prediction_tokens, (0, 1, 0, 0.5))
+
+        # Plot the prediction masked image
+        axs.imshow(canvas_image.permute(1, 2, 0))
+        for idx, (input_token, prediction_token) in enumerate(zip(input_tokens, prediction_tokens)):
+            x1, y1, x2, y2 = prediction_token['bbox']
+            x1 = round(x1 * (canvas_image.shape[2] - 1) / 500)
+            x2 = round(x2 * (canvas_image.shape[2] - 1) / 500)
+            y1 = round(y1 * (canvas_image.shape[1] - 1) / 500)
+            y2 = round(y2 * (canvas_image.shape[1] - 1) / 500)
+            axs.text(x1, y1, idx, fontsize=8, bbox=dict(alpha=0.2))
+        axs.set_title(f'Blank Prediction Layout')
+
+    label_text = '\n'.join([f"{token['id']}: {token['text']}" for token in input_tokens])
+
+    plt.tight_layout()
+    plt.show()
+    if data_args.do_save_visualize:
+        f = open(os.path.join(output_dir, f'inference_{index}_text.txt'), 'w')
+        f.write(label_text)
+        f.close()
+        fig.savefig(os.path.join(output_dir, f'inference_{index}.png'))
