@@ -291,11 +291,7 @@ def main():
     # Set seed before initializing model.
     set_seed(training_args.seed)
 
-    # Load pretrained model and tokenizer
-    #
-    # Distributed training:
-    # The .from_pretrained methods guarantee that only one local process can concurrently
-    # download model & vocab.
+    # Load processo,r pretrained model and tokenizer
 
     image_processor = UdopImageProcessor(
         apply_ocr=False,
@@ -308,7 +304,7 @@ def main():
     ).to(device)
     processor = UdopProcessor(image_processor=image_processor, tokenizer=tokenizer)
 
-    # Get datasets
+    # Load datasets
     total_dataset = MIRIDIH_Dataset(
         processor=processor, tokenizer=tokenizer, data_args=data_args
     )
@@ -335,6 +331,7 @@ def main():
         predictions, labels = eval_pred
         return metric.compute(predictions=predictions, references=labels)
 
+    # Used to adjust masking ratio when using curriculum learning
     elevateMRcallback = elevateMRCallback(
         train_dataset=train_dataset,
         eval_dataset=eval_dataset,
@@ -390,7 +387,7 @@ def main():
         trainer.log_metrics("test", metrics)
         trainer.save_metrics("test", metrics)
 
-    # Predict
+    # Predict on test dataset
     if training_args.do_predict:
         logger.info("*** Predict ***")
         os.makedirs(training_args.output_dir, exist_ok=True)
@@ -450,7 +447,7 @@ def main():
             print("\nPrediction: ", prediction_text)
             print()
 
-    # Inference
+    # Inference on raw text and image
     if data_args.do_inference:
         logger.info("*** Inference ***")
 

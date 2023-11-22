@@ -429,8 +429,6 @@ def main():
 
 
 if __name__ == "__main__":
-
-    
     sweep_config = {
         "method": "bayes",
         "metric": {
