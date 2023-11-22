@@ -1,17 +1,31 @@
-# [Unifying Vision, Text, and Layout for Universal Document Processing (CVPR 2023 Highlight)](https://arxiv.org/abs/2212.02623)
+<div align="center">
 
+# Design Layout Generation through <br> Vision-Text-Layout Transformer
 
 ![PyTorch](https://img.shields.io/badge/PyTorch-%23EE4C2C.svg?style=for-the-badge&logo=PyTorch&logoColor=white)
 ![Python](https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54)
 ![Visual Studio Code](https://img.shields.io/badge/Visual%20Studio%20Code-0078d7.svg?style=for-the-badge&logo=visual-studio-code&logoColor=white)
 
+</div>
+
+Baseline - [Unifying Vision, Text, and Layout for Universal Document Processing <br> (CVPR 2023 Highlight)](https://arxiv.org/abs/2212.02623)
 
 ## Project Overview![](https://raw.githubusercontent.com/aregtech/areg-sdk/master/docs/img/pin.svg)
 
-The goal of the 2023 MIRIDIH Corporate Collaboration Project is to utilise MIRIDIH's dataset to recommend and generate an optimal design layout for a given user query. This repository contains the code responsible for generating the design layout, specifically to generate bounding box tokens for each sentence in the query. This repository contains the code responsible for following tasks:
+<img src="https://github.com/miridi-sanhak/UDOP/assets/96368116/c7c2a63f-ba1b-43e3-ba4d-9d20cd91147b">
+
+The goal of the 2023 MIRIDIH Corporate Collaboration Project is to utilise MIRIDIH's dataset to recommend and generate an optimal design layout for a given user's query. This repository contains the code responsible for generating the design layout, specifically to generate bounding box tokens for each sentence in the query. This repository contains the code responsible for following tasks:
 - Preprocess raw XML data to extract text, image and layout data
-- Finetune UDOP model for design layout generation, using self-supervised `Layout Modeling` task
-- Inference UDOP model to generate bounding box tokens for each sentence in the query
+- Finetune Vision-Text-Layout(VTL) Transformer, based on Universal Document Processing (UDOP) model for design layout generation.
+- Inference VTL model to generate bounding box tokens for each sentence in the query
+
+
+## Model Architecture
+The Vision-Text-Layout Transformer is based on UDOP, a model proposed in [Unifying Vision, Text, and Layout for Universal Document Processing (CVPR 2023 Highlight)](https://arxiv.org/abs/2212.02623). UDOP is a foundation Document AI model which unifies text, image, and layout modalities together with varied task formats, including document understanding and generation.
+We have modified and fine-tuned the UDOP model for design layout generation. The model architecture is as follows:
+
+
+
 
 
 ## Repository Structure
@@ -38,8 +52,9 @@ The repository has two branches:
 │   │   └── image_{idx}.png
 │   └── json_data/
 │       └── processed_{idx}.pickle
-├── main.py                     
+├── main.py                         # Main script to run training/inference
 ├── models                          # Trained models saved to this folder
+├── sweep.py                        # Script to run hyperparameter sweep
 ├── test                            # Save visualizations during inference
 ├── requirements.txt
 ├── udop-unimodel-large-224         # Pretrained UDOP 224 model
