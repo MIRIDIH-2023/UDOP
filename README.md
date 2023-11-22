@@ -8,7 +8,7 @@
 
 </div>
 
-Baseline - [Unifying Vision, Text, and Layout for Universal Document Processing <br> (CVPR 2023 Highlight)](https://arxiv.org/abs/2212.02623)
+Baseline - [Unifying Vision, Text, and Layout for Universal Document Processing(CVPR 2023 Highlight)](https://arxiv.org/abs/2212.02623)
 
 ## Project Overview![](https://raw.githubusercontent.com/aregtech/areg-sdk/master/docs/img/pin.svg)
 
@@ -23,6 +23,10 @@ The goal of the 2023 MIRIDIH Corporate Collaboration Project is to utilise MIRID
 ## Model Architecture
 The Vision-Text-Layout Transformer is based on UDOP, a model proposed in [Unifying Vision, Text, and Layout for Universal Document Processing (CVPR 2023 Highlight)](https://arxiv.org/abs/2212.02623). UDOP is a foundation Document AI model which unifies text, image, and layout modalities together with varied task formats, including document understanding and generation.
 We have modified and fine-tuned the UDOP model for design layout generation. The model architecture is as follows:
+
+<img src="https://github.com/miridi-sanhak/UDOP/assets/96368116/337c8acc-ab63-48d5-9aa6-ae6901dd93cf">
+
+<img src="https://github.com/miridi-sanhak/UDOP/assets/96368116/5ec3149a-83bc-467f-9a62-b997ece85696">
 
 
 
